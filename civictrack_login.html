@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicTrack – Login</title>
+
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    
+    <link rel="stylesheet" href="civictrack-login.css">
+</head>
+<body>
+
+    
+    <div class="controls">
+        <button class="lang-toggle" onclick="toggleLanguage()" id="langBtn">हिन्दी</button>
+    </div>
+
+    
+    <div class="card">
+
+        
+        <img src="logo.jpg" alt="CivicTrack Logo" class="logo">
+
+        
+        <div class="progress">
+            <div class="dot active" id="dot-1"></div>
+            <div class="dot"        id="dot-2"></div>
+            <div class="dot"        id="dot-3"></div>
+        </div>
+
+        
+        <div class="dev-panel" id="devPanel">
+            <div>
+                <div class="dev-label">🛠 Dev – Current OTP</div>
+                <div class="dev-otp" id="devOtpVal">——</div>
+            </div>
+            <button class="dev-copy" onclick="copyOTP()">Copy</button>
+        </div>
+
+        
+        <div class="screens-container" id="screens-container">
+
+            
+            <div class="screen active" id="screen-1">
+
+                <h1 data-en="Report It. Track It. Fix It."
+                    data-hi="रिपोर्ट करें। ट्रैक करें। समाधान करें।">
+                    Report It. Track It. Fix It.
+                </h1>
+                <p data-en="Sign in with your mobile number to access civic services."
+                   data-hi="नागरिक सेवाओं तक पहुंचने के लिए मोबाइल नंबर से साइन इन करें।">
+                    Sign in with your mobile number to access civic services.
+                </p>
+
+                
+                <div class="input-box">
+                    <div class="phone-row">
+                        <select class="country-code" id="countryCode">
+                            <option value="+91">🇮🇳 +91</option>
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="+44">🇬🇧 +44</option>
+                        </select>
+                        <input type="tel" id="phoneNumber" class="phone-input"
+                               placeholder=" " maxlength="10" autocomplete="off"
+                               required
+                               oninput="this.value=this.value.replace(/[^0-9]/g,''); validatePhone()">
+                    </div>
+                    <label data-en="Mobile Number" data-hi="मोबाइल नंबर"
+                           style="left:70px;" id="phoneLbl">Mobile Number</label>
+                </div>
+                <div class="error-message" id="phoneError"
+                     data-en="Please enter a valid 10-digit number."
+                     data-hi="कृपया वैध 10-अंकीय नंबर दर्ज करें।">
+                    Please enter a valid 10-digit number.
+                </div>
+
+                <button class="btn" id="sendOtpBtn" onclick="sendOTP()">
+                    <span data-en="Send OTP" data-hi="OTP भेजें">Send OTP</span>
+                </button>
+
+                <div class="register-link mt-12">
+                    <small style="color:#666;"
+                           data-en="We'll send a 6-digit code via SMS"
+                           data-hi="हम SMS द्वारा 6-अंकीय कोड भेजेंगे">
+                        We'll send a 6-digit code via SMS
+                    </small>
+                </div>
+                <div class="register-link">
+                    <a href="#" class="link"
+                       data-en="Report an issue via SMS instead →"
+                       data-hi="बजाय SMS द्वारा समस्या रिपोर्ट करें →">
+                        Report an issue via SMS instead →
+                    </a>
+                </div>
+            </div>
+
+            
+            <div class="screen" id="screen-2">
+                <h2 data-en="Enter OTP" data-hi="OTP दर्ज करें">Enter OTP</h2>
+                <p>
+                    <span data-en="Code sent to" data-hi="कोड भेजा गया">Code sent to</span>
+                    <strong id="displayNumber" style="color:var(--primary);">+91 98****3210</strong><br>
+                    <a href="#" class="link" onclick="goToScreen(1)" style="font-size:12px;"
+                       data-en="Change Number" data-hi="नंबर बदलें">Change Number</a>
+                </p>
+
+                <div id="otpGroup">
+                    <div class="otp-container">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box"
+                               oninput="handleOtpInput(this,0)"
+                               onkeydown="handleOtpKeydown(event,0)"
+                               onpaste="handleOtpPaste(event)">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box"
+                               oninput="handleOtpInput(this,1)" onkeydown="handleOtpKeydown(event,1)">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box"
+                               oninput="handleOtpInput(this,2)" onkeydown="handleOtpKeydown(event,2)">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box"
+                               oninput="handleOtpInput(this,3)" onkeydown="handleOtpKeydown(event,3)">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box"
+                               oninput="handleOtpInput(this,4)" onkeydown="handleOtpKeydown(event,4)">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box"
+                               oninput="handleOtpInput(this,5)" onkeydown="handleOtpKeydown(event,5)">
+                    </div>
+                    <div class="error-message text-center" id="otpError"
+                         data-en="Invalid OTP. Please try again."
+                         data-hi="अमान्य OTP। पुनः प्रयास करें।">
+                        Invalid OTP. Please try again.
+                    </div>
+                </div>
+
+                <button class="btn" onclick="verifyOTP()">
+                    <span data-en="Verify &amp; Continue"
+                          data-hi="सत्यापित करें और जारी रखें">
+                        Verify &amp; Continue
+                    </span>
+                </button>
+
+                <div class="register-link mt-12 text-center">
+                    <span id="timerText" style="font-size:13px; color:#666;">
+                        <span data-en="Resend OTP in" data-hi="में पुनः OTP भेजें">Resend OTP in</span>
+                        <strong id="timer">0:45</strong>
+                    </span>
+                    <a href="#" class="link" id="resendLink" style="display:none; font-size:13px;"
+                       onclick="resendOTP()"
+                       data-en="Resend OTP" data-hi="पुनः OTP भेजें">Resend OTP</a>
+                </div>
+            </div>
+
+            
+            <div class="screen" id="screen-3">
+                <h2 data-en="Complete Profile" data-hi="प्रोफ़ाइल पूरी करें">Complete Profile</h2>
+                <p data-en="Looks like you're new here. Tell us a bit about yourself."
+                   data-hi="लगता है आप नए हैं। अपने बारे में कुछ बताएं।">
+                    Looks like you're new here. Tell us a bit about yourself.
+                </p>
+
+                <div class="input-box">
+                    <input type="text" id="fullName" placeholder=" " required
+                           autocomplete="off" oninput="validateName()">
+                    <label data-en="Full Name" data-hi="पूरा नाम">Full Name</label>
+                </div>
+                <div class="error-message" id="nameError"
+                     data-en="Please enter at least 2 characters."
+                     data-hi="कृपया कम से कम 2 अक्षर दर्ज करें।">
+                    Please enter at least 2 characters.
+                </div>
+
+                <div class="input-box">
+                    <input type="text" id="locality" placeholder=" " required>
+                    <label data-en="Ward / Locality" data-hi="वार्ड / मोहल्ला">Ward / Locality</label>
+                </div>
+
+                <div class="input-box">
+                    <input type="text" id="city" placeholder=" " value="Mumbai" required>
+                    <label data-en="City" data-hi="शहर">City</label>
+                </div>
+
+                <label class="checkbox-container">
+                    <input type="checkbox" id="whatsappOptIn" checked>
+                    <span class="checkmark"></span>
+                    <span class="checkbox-text"
+                          data-en="I want to receive civic updates on WhatsApp"
+                          data-hi="मैं WhatsApp पर नागरिक अपडेट प्राप्त करना चाहता/चाहती हूँ">
+                        I want to receive civic updates on WhatsApp
+                    </span>
+                </label>
+
+                <button class="btn" onclick="submitRegistration()">
+                    <span data-en="Create Account &amp; Continue"
+                          data-hi="खाता बनाएं और आगे बढ़ें">
+                        Create Account &amp; Continue
+                    </span>
+                </button>
+            </div>
+
+            
+            <div class="screen" id="screen-4">
+                <div class="success-circle">
+                    <svg class="success-icon" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="3">
+                        <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h2 class="text-center" id="successTitle"
+                    data-en="Account Created!" data-hi="खाता बन गया!">
+                    Account Created!
+                </h2>
+                <p class="text-center"
+                   data-en="Redirecting to your dashboard…"
+                   data-hi="आपके डैशबोर्ड पर पुनः निर्देशित हो रहे हैं…">
+                    Redirecting to your dashboard…
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+    
+    <div class="sms-banner">
+        <span>🔔</span>
+        <span data-en="No internet? Text REPORT to 56789"
+              data-hi="इंटरनेट नहीं? 56789 पर REPORT SMS करें">
+            No internet? Text REPORT to 56789
+        </span>
+    </div>
+
+    <script src="civictrack-otp.js" defer></script>
+</body>
+</html>

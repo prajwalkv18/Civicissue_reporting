@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicTrack – Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="civictrack-dashboard.css">
+</head>
+<body>
+
+    
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <img src="logo.jpg" alt="CivicTrack">
+        </div>
+
+        <div class="nav-section-label">Main</div>
+
+        <div class="nav-item active" onclick="setActive(this)">
+            <span class="nav-icon">🏠</span>
+            <span>Dashboard</span>
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+            <span class="nav-icon">📋</span>
+            <span>My Reports</span>
+            <span class="nav-badge" id="myReportsBadge">3</span>
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+            <span class="nav-icon">🗺️</span>
+            <span>Nearby Issues</span>
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+            <span class="nav-icon">🔔</span>
+            <span>Notifications</span>
+            <span class="nav-badge">2</span>
+        </div>
+
+        <div class="nav-section-label">Community</div>
+
+        <div class="nav-item" onclick="setActive(this)">
+            <span class="nav-icon">📊</span>
+            <span>Ward Stats</span>
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+            <span class="nav-icon">🏆</span>
+            <span>Leaderboard</span>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar" id="sidebarAvatar">R</div>
+                <div>
+                    <div class="user-name" id="sidebarName">Resident</div>
+                    <div class="user-ward" id="sidebarWard">Ward 42, Mumbai</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    
+    <main class="main">
+
+        
+        <div class="topbar">
+            <div class="topbar-title">Dashboard</div>
+            <div class="topbar-right">
+                <div class="notif-bell" title="Notifications">
+                    🔔
+                    <span class="notif-dot"></span>
+                </div>
+                <button class="topbar-btn" onclick="openModal()">
+                    ＋ Report Issue
+                </button>
+            </div>
+        </div>
+
+        
+        <div class="page-body">
+
+            
+            <div class="welcome-banner">
+                <div>
+                    <h2 id="welcomeMsg">Welcome back!</h2>
+                    <p id="welcomeSub">Here's what's happening in your ward today.</p>
+                </div>
+                <div class="welcome-icon">🏙️</div>
+            </div>
+
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">📝</div>
+                    <div>
+                        <div class="stat-num" id="statTotal">3</div>
+                        <div class="stat-label">Issues Reported</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">✅</div>
+                    <div>
+                        <div class="stat-num">1</div>
+                        <div class="stat-label">Resolved</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">⏳</div>
+                    <div>
+                        <div class="stat-num">2</div>
+                        <div class="stat-label">In Progress</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red">⚠️</div>
+                    <div>
+                        <div class="stat-num">0</div>
+                        <div class="stat-label">Overdue</div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="content-grid">
+
+                
+                <div class="section-card">
+                    <div class="section-header">
+                        <h3>Recent Reports</h3>
+                        <span class="see-all">See all →</span>
+                    </div>
+                    <div class="issue-list" id="issueList">
+
+                        <div class="issue-item">
+                            <div class="issue-type-icon" style="background:#fef3e2;">🕳️</div>
+                            <div class="issue-info">
+                                <div class="issue-title">Pothole on MG Road near bus stop</div>
+                                <div class="issue-meta">Ward 42 · Reported 2 days ago</div>
+                            </div>
+                            <span class="issue-status status-progress">In Progress</span>
+                        </div>
+
+                        <div class="issue-item">
+                            <div class="issue-type-icon" style="background:#e6f4ea;">💡</div>
+                            <div class="issue-info">
+                                <div class="issue-title">Broken streetlight – Nehru Nagar junction</div>
+                                <div class="issue-meta">Ward 42 · Reported 5 days ago</div>
+                            </div>
+                            <span class="issue-status status-resolved">Resolved</span>
+                        </div>
+
+                        <div class="issue-item">
+                            <div class="issue-type-icon" style="background:#fce8e6;">🗑️</div>
+                            <div class="issue-info">
+                                <div class="issue-title">Garbage not collected – Sector 7B</div>
+                                <div class="issue-meta">Ward 42 · Reported today</div>
+                            </div>
+                            <span class="issue-status status-open">Open</span>
+                        </div>
+
+                        <div class="issue-item" id="noIssues" style="display:none; justify-content:center; color:#aaa; font-size:13px; padding:24px;">
+                            No reports yet. Use "Report Issue" to get started!
+                        </div>
+
+                    </div>
+                </div>
+
+                
+                <div style="display:flex; flex-direction:column; gap:20px;">
+
+                    
+                    <div class="section-card">
+                        <div class="section-header">
+                            <h3>Quick Report</h3>
+                        </div>
+                        <div class="quick-report">
+                            <div class="form-group">
+                                <label class="form-label">Issue Type</label>
+                                <select class="form-select" id="quickIssueType">
+                                    <option value="">Select type…</option>
+                                    <option>🕳️ Pothole</option>
+                                    <option>💡 Street Light</option>
+                                    <option>🗑️ Garbage</option>
+                                    <option>💧 Water Supply</option>
+                                    <option>🌳 Tree / Fallen Branch</option>
+                                    <option>🚧 Road Damage</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Location</label>
+                                <input type="text" class="form-input" id="quickLocation" placeholder="e.g. MG Road, near post office">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-textarea" id="quickDesc" placeholder="Brief description…"></textarea>
+                            </div>
+                            <button class="submit-btn" onclick="submitQuickReport()">Submit Report</button>
+                        </div>
+                    </div>
+
+                    
+                    <div class="section-card">
+                        <div class="section-header">
+                            <h3>Activity Feed</h3>
+                        </div>
+                        <div class="activity-list" id="activityFeed">
+                            <div class="activity-item">
+                                <div class="activity-dot dot-green"></div>
+                                <div>
+                                    <div class="activity-text">Your streetlight report was <strong>resolved</strong></div>
+                                    <div class="activity-time">5 days ago</div>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-dot dot-blue"></div>
+                                <div>
+                                    <div class="activity-text">Pothole report assigned to <strong>Ward Engineer</strong></div>
+                                    <div class="activity-time">2 days ago</div>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-dot dot-orange"></div>
+                                <div>
+                                    <div class="activity-text">New report submitted – Garbage issue</div>
+                                    <div class="activity-time">Just now</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    
+    <div class="modal-overlay" id="reportModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Report a Civic Issue</h3>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Issue Type</label>
+                    <select class="form-select" id="modalIssueType">
+                        <option value="">Select type…</option>
+                        <option>🕳️ Pothole</option>
+                        <option>💡 Street Light</option>
+                        <option>🗑️ Garbage</option>
+                        <option>💧 Water Supply</option>
+                        <option>🌳 Tree / Fallen Branch</option>
+                        <option>🚧 Road Damage</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Location</label>
+                    <input type="text" class="form-input" id="modalLocation" placeholder="Street address or landmark">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ward / Area</label>
+                    <input type="text" class="form-input" id="modalWard" placeholder="e.g. Ward 42, Andheri West">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" id="modalDesc" placeholder="Describe the issue in detail…" style="min-height:90px;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <select class="form-select" id="modalPriority">
+                        <option>Normal</option>
+                        <option>High</option>
+                        <option>Urgent</option>
+                    </select>
+                </div>
+                <button class="modal-submit-btn" onclick="submitModalReport()">Submit Report</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="toast" id="toast">✅ Report submitted successfully!</div>
+
+    <script>
+        const userName = sessionStorage.getItem('ct_name')  || 'Resident';
+        const userWard = sessionStorage.getItem('ct_ward')  || 'Ward 42, Mumbai';
+        const userCity = sessionStorage.getItem('ct_city')  || 'Mumbai';
+        const userPhone= sessionStorage.getItem('ct_phone') || '';
+
+        document.getElementById('welcomeMsg').textContent  = `Welcome, ${userName}!`;
+        document.getElementById('welcomeSub').textContent  = `Here's what's happening in ${userWard} today.`;
+        document.getElementById('sidebarName').textContent = userName;
+        document.getElementById('sidebarWard').textContent = `${userWard}, ${userCity}`;
+        document.getElementById('sidebarAvatar').textContent = userName.charAt(0).toUpperCase();
+
+        let reportCount = 3;
+
+        function setActive(el) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function openModal() {
+            document.getElementById('reportModal').classList.add('open');
+        }
+        function closeModal() {
+            document.getElementById('reportModal').classList.remove('open');
+        }
+        document.getElementById('reportModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function addIssueToList(type, location) {
+            const list = document.getElementById('issueList');
+            const icons = { '🕳️ Pothole':'🕳️', '💡 Street Light':'💡', '🗑️ Garbage':'🗑️', '💧 Water Supply':'💧', '🌳 Tree / Fallen Branch':'🌳', '🚧 Road Damage':'🚧', 'Other':'📌' };
+            const iconColors = { '🕳️ Pothole':'#fef3e2', '💡 Street Light':'#e8f0fe', '🗑️ Garbage':'#fce8e6', '💧 Water Supply':'#e8f8ff', '🌳 Tree / Fallen Branch':'#e6f4ea', '🚧 Road Damage':'#fff3e0', 'Other':'#f3e8ff' };
+            const icon  = icons[type]  || '📌';
+            const color = iconColors[type] || '#f0f0f0';
+
+            const item = document.createElement('div');
+            item.className = 'issue-item';
+            item.innerHTML = `
+                <div class="issue-type-icon" style="background:${color};">${icon}</div>
+                <div class="issue-info">
+                    <div class="issue-title">${type} – ${location || 'Location not specified'}</div>
+                    <div class="issue-meta">${userWard} · Reported just now</div>
+                </div>
+                <span class="issue-status status-open">Open</span>`;
+
+            list.insertBefore(item, list.firstChild);
+
+            reportCount++;
+            document.getElementById('statTotal').textContent = reportCount;
+            document.getElementById('myReportsBadge').textContent = reportCount;
+
+            const feed = document.getElementById('activityFeed');
+            const entry = document.createElement('div');
+            entry.className = 'activity-item';
+            entry.innerHTML = `
+                <div class="activity-dot dot-orange"></div>
+                <div>
+                    <div class="activity-text">New report submitted – <strong>${type}</strong></div>
+                    <div class="activity-time">Just now</div>
+                </div>`;
+            feed.insertBefore(entry, feed.firstChild);
+        }
+
+        function submitQuickReport() {
+            const type = document.getElementById('quickIssueType').value;
+            const loc  = document.getElementById('quickLocation').value.trim();
+            const desc = document.getElementById('quickDesc').value.trim();
+
+            if (!type) { showToast('⚠️ Please select an issue type'); return; }
+            if (!loc)  { showToast('⚠️ Please enter a location'); return; }
+
+            addIssueToList(type, loc);
+            document.getElementById('quickIssueType').value = '';
+            document.getElementById('quickLocation').value  = '';
+            document.getElementById('quickDesc').value      = '';
+            showToast('✅ Report submitted successfully!');
+        }
+
+        function submitModalReport() {
+            const type = document.getElementById('modalIssueType').value;
+            const loc  = document.getElementById('modalLocation').value.trim();
+
+            if (!type) { showToast('⚠️ Please select an issue type'); return; }
+            if (!loc)  { showToast('⚠️ Please enter a location'); return; }
+
+            addIssueToList(type, loc);
+            closeModal();
+            document.getElementById('modalIssueType').value  = '';
+            document.getElementById('modalLocation').value   = '';
+            document.getElementById('modalWard').value       = '';
+            document.getElementById('modalDesc').value       = '';
+            showToast('✅ Report submitted successfully!');
+        }
+    </script>
+</body>
+</html>
