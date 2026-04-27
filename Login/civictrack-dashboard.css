@@ -36,7 +36,7 @@ body::before {
     content: '';
     position: fixed;
     inset: 0;
-    background: url('loginpage.jpg') no-repeat center center / cover;
+    background: url('../Login/loginpage.jpg') no-repeat center center / cover;
     opacity: 0.15;
     pointer-events: none;
     z-index: 0;
@@ -461,6 +461,60 @@ a { text-decoration: none; color: inherit; }
     gap: 8px;
 }
 .toast.show { transform: translateY(0); opacity: 1; }
+
+.location-input-group {
+    display: flex;
+    gap: 8px;
+}
+.location-input-group .form-input {
+    flex: 1;
+}
+.btn-icon {
+    background: #f0f2f5;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    transition: var(--transition);
+}
+.btn-icon:hover {
+    background: #e5e7eb;
+    border-color: var(--primary);
+}
+
+.file-upload-box {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    background: #fafafa;
+    color: var(--text-muted);
+    transition: var(--transition);
+    font-size: 13px;
+    font-weight: 500;
+}
+.file-upload-box:hover {
+    border-color: var(--primary);
+    background: #f0f2f5;
+    color: var(--primary);
+}
+.photo-preview {
+    margin-top: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 100%;
+}
+.photo-preview img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+}
 
 @media (max-width: 1024px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicTrack – My Reports</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="civictrack-dashboard.css">
+    <style>
+        .page-content { padding: 28px; }
+        .report-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <img src="../Login/logo.jpg" alt="CivicTrack">
+        </div>
+        <div class="nav-section-label">Main</div>
+        <a href="civictrack-dashboard.html" class="nav-item">
+            <span class="nav-icon">🏠</span>
+            <span>Dashboard</span>
+        </a>
+        <a href="civictrack-my-reports.html" class="nav-item active">
+            <span class="nav-icon">📋</span>
+            <span>My Reports</span>
+            <span class="nav-badge" id="myReportsBadge">3</span>
+        </a>
+        <a href="civictrack-nearby-issues.html" class="nav-item">
+            <span class="nav-icon">🗺️</span>
+            <span>Nearby Issues</span>
+        </a>
+        <a href="civictrack-notifications.html" class="nav-item">
+            <span class="nav-icon">🔔</span>
+            <span>Notifications</span>
+            <span class="nav-badge">2</span>
+        </a>
+        <div class="nav-section-label">Community</div>
+        <a href="civictrack-ward-stats.html" class="nav-item">
+            <span class="nav-icon">📊</span>
+            <span>Ward Stats</span>
+        </a>
+        <a href="civictrack-leaderboard.html" class="nav-item">
+            <span class="nav-icon">🏆</span>
+            <span>Leaderboard</span>
+        </a>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar" id="sidebarAvatar">R</div>
+                <div>
+                    <div class="user-name" id="sidebarName">Resident</div>
+                    <div class="user-ward" id="sidebarWard">Ward 42, Mumbai</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-title">My Reports</div>
+            <div class="topbar-right">
+                <a href="civictrack-notifications.html" class="notif-bell" title="Notifications">
+                    🔔<span class="notif-dot"></span>
+                </a>
+                <button class="topbar-btn" onclick="openModal()">＋ Report Issue</button>
+            </div>
+        </div>
+        <div class="page-content">
+            <div class="report-card">
+                <h3>Pothole on MG Road near bus stop</h3>
+                <p>Status: <span class="issue-status status-progress">In Progress</span></p>
+                <p class="issue-meta">Reported 2 days ago</p>
+            </div>
+            <div class="report-card">
+                <h3>Broken streetlight – Nehru Nagar junction</h3>
+                <p>Status: <span class="issue-status status-resolved">Resolved</span></p>
+                <p class="issue-meta">Reported 5 days ago</p>
+            </div>
+            <div class="report-card">
+                <h3>Garbage not collected – Sector 7B</h3>
+                <p>Status: <span class="issue-status status-open">Open</span></p>
+                <p class="issue-meta">Reported today</p>
+            </div>
+        </div>
+    </main>
+    <div class="modal-overlay" id="reportModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Report a Civic Issue</h3>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 20px;">Use the Dashboard to quick report.</p>
+                <button class="modal-submit-btn" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const userName = sessionStorage.getItem('ct_name')  || 'Resident';
+        const userWard = sessionStorage.getItem('ct_ward')  || 'Ward 42, Mumbai';
+        const userCity = sessionStorage.getItem('ct_city')  || 'Mumbai';
+        document.getElementById('sidebarName').textContent = userName;
+        document.getElementById('sidebarWard').textContent = `${userWard}, ${userCity}`;
+        document.getElementById('sidebarAvatar').textContent = userName.charAt(0).toUpperCase();
+
+        function openModal() { document.getElementById('reportModal').classList.add('open'); }
+        function closeModal() { document.getElementById('reportModal').classList.remove('open'); }
+    </script>
+</body>
+</html>

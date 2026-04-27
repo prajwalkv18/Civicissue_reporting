@@ -14,40 +14,46 @@
     
     <aside class="sidebar">
         <div class="sidebar-logo">
-            <img src="logo.jpg" alt="CivicTrack">
+            <img src="../Login/logo.jpg" alt="CivicTrack">
         </div>
 
         <div class="nav-section-label">Main</div>
 
-        <div class="nav-item active" onclick="setActive(this)">
+        <a href="civictrack-dashboard.html" class="nav-item active">
             <span class="nav-icon">🏠</span>
             <span>Dashboard</span>
-        </div>
-        <div class="nav-item" onclick="setActive(this)">
+        </a>
+        <a href="civictrack-my-reports.html" class="nav-item">
             <span class="nav-icon">📋</span>
             <span>My Reports</span>
             <span class="nav-badge" id="myReportsBadge">3</span>
-        </div>
-        <div class="nav-item" onclick="setActive(this)">
+        </a>
+        <a href="civictrack-nearby-issues.html" class="nav-item">
             <span class="nav-icon">🗺️</span>
             <span>Nearby Issues</span>
-        </div>
-        <div class="nav-item" onclick="setActive(this)">
+        </a>
+        <a href="civictrack-notifications.html" class="nav-item">
             <span class="nav-icon">🔔</span>
             <span>Notifications</span>
             <span class="nav-badge">2</span>
-        </div>
+        </a>
 
         <div class="nav-section-label">Community</div>
 
-        <div class="nav-item" onclick="setActive(this)">
+        <a href="civictrack-ward-stats.html" class="nav-item">
             <span class="nav-icon">📊</span>
             <span>Ward Stats</span>
-        </div>
-        <div class="nav-item" onclick="setActive(this)">
+        </a>
+        <a href="civictrack-leaderboard.html" class="nav-item">
             <span class="nav-icon">🏆</span>
             <span>Leaderboard</span>
-        </div>
+        </a>
+
+        <div class="nav-section-label">Administration</div>
+        <a href="civictrack-admin.html" class="nav-item" style="color:rgba(244,144,12,0.85);">
+            <span class="nav-icon">🛡️</span>
+            <span>Admin Panel</span>
+        </a>
 
         <div class="sidebar-footer">
             <div class="user-info">
@@ -190,7 +196,20 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Location</label>
-                                <input type="text" class="form-input" id="quickLocation" placeholder="e.g. MG Road, near post office">
+                                <div class="location-input-group">
+                                    <input type="text" class="form-input" id="quickLocation" placeholder="e.g. MG Road, near post office">
+                                    <button type="button" class="btn-icon" onclick="detectLocation('quickLocation')" title="Detect Location">🎯</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Photo (with Geotag)</label>
+                                <div class="file-upload-box" onclick="document.getElementById('quickPhoto').click()">
+                                    <span>📷 Tap to upload or take a photo</span>
+                                    <input type="file" id="quickPhoto" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(this, 'quickPhotoPreview', 'quickLocation')">
+                                </div>
+                                <div id="quickPhotoPreview" class="photo-preview" style="display:none;">
+                                    <img src="" id="quickPhotoImg" alt="Preview">
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Description</label>
@@ -258,7 +277,20 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Location</label>
-                    <input type="text" class="form-input" id="modalLocation" placeholder="Street address or landmark">
+                    <div class="location-input-group">
+                        <input type="text" class="form-input" id="modalLocation" placeholder="Street address or landmark">
+                        <button type="button" class="btn-icon" onclick="detectLocation('modalLocation')" title="Detect Location">🎯</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Photo (with Geotag)</label>
+                    <div class="file-upload-box" onclick="document.getElementById('modalPhoto').click()">
+                        <span>📷 Tap to upload or take a photo</span>
+                        <input type="file" id="modalPhoto" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(this, 'modalPhotoPreview', 'modalLocation')">
+                    </div>
+                    <div id="modalPhotoPreview" class="photo-preview" style="display:none;">
+                        <img src="" id="modalPhotoImg" alt="Preview">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Ward / Area</label>
@@ -308,6 +340,44 @@
         }
         function closeModal() {
             document.getElementById('reportModal').classList.remove('open');
+        }
+        
+        function handlePhotoSelect(input, previewId, locationInputId) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById(previewId);
+                    preview.style.display = 'block';
+                    preview.querySelector('img').src = e.target.result;
+                    
+                    if(confirm("Would you like to automatically attach your current GPS location to this report?")) {
+                        detectLocation(locationInputId);
+                    }
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function detectLocation(inputId) {
+            const input = document.getElementById(inputId);
+            const originalPlaceholder = input.placeholder;
+            input.placeholder = "Detecting location...";
+            input.value = "";
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const lat = position.coords.latitude.toFixed(5);
+                    const lng = position.coords.longitude.toFixed(5);
+                    input.value = `Geo: ${lat}, ${lng}`;
+                    showToast('📍 Location detected successfully!');
+                }, (error) => {
+                    input.placeholder = originalPlaceholder;
+                    showToast('⚠️ Could not detect location: ' + error.message);
+                });
+            } else {
+                input.placeholder = originalPlaceholder;
+                showToast("⚠️ Geolocation is not supported.");
+            }
         }
         document.getElementById('reportModal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();

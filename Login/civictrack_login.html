@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicTrack – Login</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="civictrack-login.css">
+</head>
+<body>
+
+    <div class="controls">
+        <button class="lang-toggle" onclick="toggleLanguage()" id="langBtn">हिन्दी</button>
+    </div>
+
+    <div class="card">
+        
+        <img src="logo.jpg" alt="CivicTrack Logo" class="logo">
+
+        <div class="progress">
+            <div class="dot active" id="dot-1"></div>
+            <div class="dot"        id="dot-2"></div>
+            <div class="dot"        id="dot-3"></div>
+        </div>
+
+        <div class="screens-container" id="screens-container">
+
+            <!-- SCREEN 1: Email / Password -->
+            <div class="screen active" id="screen-1">
+
+                <h1 data-en="Report It. Track It. Fix It."
+                    data-hi="रिपोर्ट करें। ट्रैक करें। समाधान करें।">
+                    Report It. Track It. Fix It.
+                </h1>
+                <p data-en="Sign in with your email to access civic services."
+                   data-hi="नागरिक सेवाओं तक पहुंचने के लिए अपने ईमेल से साइन इन करें।">
+                    Sign in with your email to access civic services.
+                </p>
+
+                <div class="input-box">
+                    <input type="email" id="emailInput" placeholder=" " required autocomplete="email">
+                    <label data-en="Email Address" data-hi="ईमेल पता">Email Address</label>
+                </div>
+
+                <div class="input-box" style="margin-top: 14px;">
+                    <input type="password" id="passwordInput" placeholder=" " required autocomplete="current-password">
+                    <label data-en="Password" data-hi="पासवर्ड">Password</label>
+                </div>
+
+                <div class="error-message" id="loginError"
+                     data-en="Please enter a valid email and password."
+                     data-hi="कृपया एक वैध ईमेल और पासवर्ड दर्ज करें।">
+                    Please enter a valid email and password.
+                </div>
+
+                <button class="btn" id="signInBtn" onclick="attemptLogin()">
+                    <span data-en="Sign In / Register" data-hi="साइन इन / रजिस्टर">Sign In / Register</span>
+                </button>
+
+                <div class="register-link mt-12">
+                    <small style="color:#666;"
+                           data-en="Secure access to your CivicTrack dashboard"
+                           data-hi="अपने CivicTrack डैशबोर्ड तक सुरक्षित पहुंच">
+                        Secure access to your CivicTrack dashboard
+                    </small>
+                </div>
+            </div>
+
+            <!-- SCREEN 2: Missing Details (Registration) -->
+            <div class="screen" id="screen-2">
+                <h2 data-en="Complete Profile" data-hi="प्रोफ़ाइल पूरी करें">Complete Profile</h2>
+                <p data-en="Looks like you're new here. Tell us a bit about yourself."
+                   data-hi="लगता है आप नए हैं। अपने बारे में कुछ बताएं।">
+                    Looks like you're new here. Tell us a bit about yourself.
+                </p>
+
+                <div class="input-box">
+                    <input type="text" id="fullName" placeholder=" " required
+                           autocomplete="off" oninput="validateName()">
+                    <label data-en="Full Name" data-hi="पूरा नाम">Full Name</label>
+                </div>
+                <div class="error-message" id="nameError"
+                     data-en="Please enter at least 2 characters."
+                     data-hi="कृपया कम से कम 2 अक्षर दर्ज करें।">
+                    Please enter at least 2 characters.
+                </div>
+
+                <div class="input-box">
+                    <input type="text" id="locality" placeholder=" " required>
+                    <label data-en="Ward / Locality" data-hi="वार्ड / मोहल्ला">Ward / Locality</label>
+                </div>
+
+                <div class="input-box">
+                    <input type="text" id="city" placeholder=" " value="Mumbai" required>
+                    <label data-en="City" data-hi="शहर">City</label>
+                </div>
+
+                <label class="checkbox-container">
+                    <input type="checkbox" id="whatsappOptIn" checked>
+                    <span class="checkmark"></span>
+                    <span class="checkbox-text"
+                          data-en="I want to receive civic updates on WhatsApp"
+                          data-hi="मैं WhatsApp पर नागरिक अपडेट प्राप्त करना चाहता/चाहती हूँ">
+                        I want to receive civic updates on WhatsApp
+                    </span>
+                </label>
+
+                <button class="btn" onclick="submitRegistration()">
+                    <span data-en="Create Account &amp; Continue"
+                          data-hi="खाता बनाएं और आगे बढ़ें">
+                        Create Account &amp; Continue
+                    </span>
+                </button>
+            </div>
+
+            <!-- SCREEN 3: Success -->
+            <div class="screen" id="screen-3">
+                <div class="success-circle">
+                    <svg class="success-icon" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="3">
+                        <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h2 class="text-center" id="successTitle"
+                    data-en="Account Created!" data-hi="खाता बन गया!">
+                    Account Created!
+                </h2>
+                <p class="text-center"
+                   data-en="Redirecting to your dashboard…"
+                   data-hi="आपके डैशबोर्ड पर पुनः निर्देशित हो रहे हैं…">
+                    Redirecting to your dashboard…
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── Offline Banner ────────────────────── -->
+    <div class="sms-banner">
+        <span>🔔</span>
+        <span data-en="System operates over secure HTTPS connections only."
+              data-hi="सिस्टम केवल सुरक्षित HTTPS कनेक्शन पर काम करता है।">
+            System operates over secure HTTPS connections only.
+        </span>
+    </div>
+
+    <script src="civictrack-otp.js" defer></script>
+</body>
+</html>
