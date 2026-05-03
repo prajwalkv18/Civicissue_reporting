@@ -19,20 +19,20 @@
 
         <div class="nav-section-label">Main</div>
 
-        <a href="civictrack-dashboard.html" class="nav-item active">
+        <a href="civictrack-dashboard.php" class="nav-item active">
             <span class="nav-icon">🏠</span>
             <span>Dashboard</span>
         </a>
-        <a href="civictrack-my-reports.html" class="nav-item">
+        <a href="civictrack-my-reports.php" class="nav-item">
             <span class="nav-icon">📋</span>
             <span>My Reports</span>
             <span class="nav-badge" id="myReportsBadge">3</span>
         </a>
-        <a href="civictrack-nearby-issues.html" class="nav-item">
+        <a href="civictrack-nearby-issues.php" class="nav-item">
             <span class="nav-icon">🗺️</span>
             <span>Nearby Issues</span>
         </a>
-        <a href="civictrack-notifications.html" class="nav-item">
+        <a href="civictrack-notifications.php" class="nav-item">
             <span class="nav-icon">🔔</span>
             <span>Notifications</span>
             <span class="nav-badge">2</span>
@@ -40,17 +40,17 @@
 
         <div class="nav-section-label">Community</div>
 
-        <a href="civictrack-ward-stats.html" class="nav-item">
+        <a href="civictrack-ward-stats.php" class="nav-item">
             <span class="nav-icon">📊</span>
             <span>Ward Stats</span>
         </a>
-        <a href="civictrack-leaderboard.html" class="nav-item">
+        <a href="civictrack-leaderboard.php" class="nav-item">
             <span class="nav-icon">🏆</span>
             <span>Leaderboard</span>
         </a>
 
         <div class="nav-section-label">Administration</div>
-        <a href="civictrack-admin.html" class="nav-item" style="color:rgba(244,144,12,0.85);">
+        <a href="civictrack-admin.php" class="nav-item" style="color:rgba(244,144,12,0.85);">
             <span class="nav-icon">🛡️</span>
             <span>Admin Panel</span>
         </a>
@@ -328,7 +328,10 @@
         document.getElementById('sidebarWard').textContent = `${userWard}, ${userCity}`;
         document.getElementById('sidebarAvatar').textContent = userName.charAt(0).toUpperCase();
 
-        let reportCount = 3;
+        let reportCount = 0;
+
+        // Fetch issues on load
+        document.addEventListener('DOMContentLoaded', fetchIssues);
 
         function setActive(el) {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -341,7 +344,7 @@
         function closeModal() {
             document.getElementById('reportModal').classList.remove('open');
         }
-        
+
         function handlePhotoSelect(input, previewId, locationInputId) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -349,7 +352,7 @@
                     const preview = document.getElementById(previewId);
                     preview.style.display = 'block';
                     preview.querySelector('img').src = e.target.result;
-                    
+
                     if(confirm("Would you like to automatically attach your current GPS location to this report?")) {
                         detectLocation(locationInputId);
                     }
@@ -363,7 +366,7 @@
             const originalPlaceholder = input.placeholder;
             input.placeholder = "Detecting location...";
             input.value = "";
-            
+
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition((position) => {
                     const lat = position.coords.latitude.toFixed(5);
@@ -390,39 +393,79 @@
             setTimeout(() => t.classList.remove('show'), 3000);
         }
 
-        function addIssueToList(type, location) {
-            const list = document.getElementById('issueList');
+        function fetchIssues() {
+            fetch('../api/issues.php?action=fetchIssues')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const list = document.getElementById('issueList');
+                        list.innerHTML = ''; // clear existing
+                        reportCount = data.issues.length;
+                        
+                        document.getElementById('statTotal').textContent = reportCount;
+                        document.getElementById('myReportsBadge').textContent = reportCount;
+
+                        if (reportCount === 0) {
+                            list.innerHTML = '<div class="issue-item" style="justify-content:center; color:#aaa; font-size:13px; padding:24px;">No reports yet. Use "Report Issue" to get started!</div>';
+                            return;
+                        }
+
+                        data.issues.forEach(issue => {
+                            renderIssue(issue, list);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching issues:', error));
+        }
+
+        function renderIssue(issue, container) {
             const icons = { '🕳️ Pothole':'🕳️', '💡 Street Light':'💡', '🗑️ Garbage':'🗑️', '💧 Water Supply':'💧', '🌳 Tree / Fallen Branch':'🌳', '🚧 Road Damage':'🚧', 'Other':'📌' };
             const iconColors = { '🕳️ Pothole':'#fef3e2', '💡 Street Light':'#e8f0fe', '🗑️ Garbage':'#fce8e6', '💧 Water Supply':'#e8f8ff', '🌳 Tree / Fallen Branch':'#e6f4ea', '🚧 Road Damage':'#fff3e0', 'Other':'#f3e8ff' };
-            const icon  = icons[type]  || '📌';
-            const color = iconColors[type] || '#f0f0f0';
+            
+            // Extract text without emoji for matching if necessary, but here we assume DB stores the emoji
+            let typeKey = issue.issue_type;
+            
+            const icon  = icons[typeKey]  || '📌';
+            const color = iconColors[typeKey] || '#f0f0f0';
+
+            const statusClass = issue.status === 'Resolved' ? 'status-resolved' : (issue.status === 'In Progress' ? 'status-progress' : 'status-open');
 
             const item = document.createElement('div');
             item.className = 'issue-item';
             item.innerHTML = `
                 <div class="issue-type-icon" style="background:${color};">${icon}</div>
                 <div class="issue-info">
-                    <div class="issue-title">${type} – ${location || 'Location not specified'}</div>
-                    <div class="issue-meta">${userWard} · Reported just now</div>
+                    <div class="issue-title">${issue.issue_type} – ${issue.location_text}</div>
+                    <div class="issue-meta">${issue.ward} · Reported by ${issue.reported_by}</div>
                 </div>
-                <span class="issue-status status-open">Open</span>`;
+                <span class="issue-status ${statusClass}">${issue.status}</span>`;
 
-            list.insertBefore(item, list.firstChild);
+            container.appendChild(item);
+        }
 
-            reportCount++;
-            document.getElementById('statTotal').textContent = reportCount;
-            document.getElementById('myReportsBadge').textContent = reportCount;
+        function submitIssueToDb(type, location, desc, ward, priority) {
+            const formData = new FormData();
+            formData.append('action', 'submitIssue');
+            formData.append('type', type);
+            formData.append('location', location);
+            formData.append('description', desc);
+            formData.append('ward', ward);
+            formData.append('priority', priority);
 
-            const feed = document.getElementById('activityFeed');
-            const entry = document.createElement('div');
-            entry.className = 'activity-item';
-            entry.innerHTML = `
-                <div class="activity-dot dot-orange"></div>
-                <div>
-                    <div class="activity-text">New report submitted – <strong>${type}</strong></div>
-                    <div class="activity-time">Just now</div>
-                </div>`;
-            feed.insertBefore(entry, feed.firstChild);
+            fetch('../api/issues.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('✅ Report submitted successfully!');
+                    fetchIssues(); // Refresh list
+                } else {
+                    alert(data.message || 'Error submitting report');
+                }
+            })
+            .catch(error => console.error('Error:', error));
         }
 
         function submitQuickReport() {
@@ -433,27 +476,30 @@
             if (!type) { showToast('⚠️ Please select an issue type'); return; }
             if (!loc)  { showToast('⚠️ Please enter a location'); return; }
 
-            addIssueToList(type, loc);
+            submitIssueToDb(type, loc, desc, userWard, 'Normal');
+            
             document.getElementById('quickIssueType').value = '';
             document.getElementById('quickLocation').value  = '';
             document.getElementById('quickDesc').value      = '';
-            showToast('✅ Report submitted successfully!');
         }
 
         function submitModalReport() {
             const type = document.getElementById('modalIssueType').value;
             const loc  = document.getElementById('modalLocation').value.trim();
+            const desc = document.getElementById('modalDesc').value.trim();
+            const ward = document.getElementById('modalWard').value.trim() || userWard;
+            const priority = document.getElementById('modalPriority').value;
 
             if (!type) { showToast('⚠️ Please select an issue type'); return; }
             if (!loc)  { showToast('⚠️ Please enter a location'); return; }
 
-            addIssueToList(type, loc);
+            submitIssueToDb(type, loc, desc, ward, priority);
             closeModal();
+            
             document.getElementById('modalIssueType').value  = '';
             document.getElementById('modalLocation').value   = '';
             document.getElementById('modalWard').value       = '';
             document.getElementById('modalDesc').value       = '';
-            showToast('✅ Report submitted successfully!');
         }
     </script>
 </body>

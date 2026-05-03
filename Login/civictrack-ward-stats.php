@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CivicTrack – My Reports</title>
+    <title>CivicTrack – Ward Stats</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="civictrack-dashboard.css">
     <style>
         .page-content { padding: 28px; }
-        .report-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        .stats-placeholder { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); text-align: center; }
+        .stat-item { margin-bottom: 20px; font-size: 18px; }
+        .stat-item strong { font-size: 24px; color: var(--primary); }
     </style>
 </head>
 <body>
@@ -19,30 +21,30 @@
             <img src="../Login/logo.jpg" alt="CivicTrack">
         </div>
         <div class="nav-section-label">Main</div>
-        <a href="civictrack-dashboard.html" class="nav-item">
+        <a href="civictrack-dashboard.php" class="nav-item">
             <span class="nav-icon">🏠</span>
             <span>Dashboard</span>
         </a>
-        <a href="civictrack-my-reports.html" class="nav-item active">
+        <a href="civictrack-my-reports.php" class="nav-item">
             <span class="nav-icon">📋</span>
             <span>My Reports</span>
             <span class="nav-badge" id="myReportsBadge">3</span>
         </a>
-        <a href="civictrack-nearby-issues.html" class="nav-item">
+        <a href="civictrack-nearby-issues.php" class="nav-item">
             <span class="nav-icon">🗺️</span>
             <span>Nearby Issues</span>
         </a>
-        <a href="civictrack-notifications.html" class="nav-item">
+        <a href="civictrack-notifications.php" class="nav-item">
             <span class="nav-icon">🔔</span>
             <span>Notifications</span>
             <span class="nav-badge">2</span>
         </a>
         <div class="nav-section-label">Community</div>
-        <a href="civictrack-ward-stats.html" class="nav-item">
+        <a href="civictrack-ward-stats.php" class="nav-item active">
             <span class="nav-icon">📊</span>
             <span>Ward Stats</span>
         </a>
-        <a href="civictrack-leaderboard.html" class="nav-item">
+        <a href="civictrack-leaderboard.php" class="nav-item">
             <span class="nav-icon">🏆</span>
             <span>Leaderboard</span>
         </a>
@@ -58,29 +60,22 @@
     </aside>
     <main class="main">
         <div class="topbar">
-            <div class="topbar-title">My Reports</div>
+            <div class="topbar-title">Ward Stats</div>
             <div class="topbar-right">
-                <a href="civictrack-notifications.html" class="notif-bell" title="Notifications">
+                <a href="civictrack-notifications.php" class="notif-bell" title="Notifications">
                     🔔<span class="notif-dot"></span>
                 </a>
                 <button class="topbar-btn" onclick="openModal()">＋ Report Issue</button>
             </div>
         </div>
         <div class="page-content">
-            <div class="report-card">
-                <h3>Pothole on MG Road near bus stop</h3>
-                <p>Status: <span class="issue-status status-progress">In Progress</span></p>
-                <p class="issue-meta">Reported 2 days ago</p>
-            </div>
-            <div class="report-card">
-                <h3>Broken streetlight – Nehru Nagar junction</h3>
-                <p>Status: <span class="issue-status status-resolved">Resolved</span></p>
-                <p class="issue-meta">Reported 5 days ago</p>
-            </div>
-            <div class="report-card">
-                <h3>Garbage not collected – Sector 7B</h3>
-                <p>Status: <span class="issue-status status-open">Open</span></p>
-                <p class="issue-meta">Reported today</p>
+            <div class="stats-placeholder">
+                <h2>Ward 42 Overview</h2>
+                <div style="margin-top:20px;">
+                    <div class="stat-item">Total Issues Reported this month: <strong>1,240</strong></div>
+                    <div class="stat-item">Resolution Rate: <strong>85%</strong></div>
+                    <div class="stat-item">Most Active Citizen: <strong>User #419</strong></div>
+                </div>
             </div>
         </div>
     </main>

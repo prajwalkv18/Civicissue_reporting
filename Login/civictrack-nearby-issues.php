@@ -19,30 +19,30 @@
             <img src="../Login/logo.jpg" alt="CivicTrack">
         </div>
         <div class="nav-section-label">Main</div>
-        <a href="civictrack-dashboard.html" class="nav-item">
+        <a href="civictrack-dashboard.php" class="nav-item">
             <span class="nav-icon">🏠</span>
             <span>Dashboard</span>
         </a>
-        <a href="civictrack-my-reports.html" class="nav-item">
+        <a href="civictrack-my-reports.php" class="nav-item">
             <span class="nav-icon">📋</span>
             <span>My Reports</span>
             <span class="nav-badge" id="myReportsBadge">3</span>
         </a>
-        <a href="civictrack-nearby-issues.html" class="nav-item active">
+        <a href="civictrack-nearby-issues.php" class="nav-item active">
             <span class="nav-icon">🗺️</span>
             <span>Nearby Issues</span>
         </a>
-        <a href="civictrack-notifications.html" class="nav-item">
+        <a href="civictrack-notifications.php" class="nav-item">
             <span class="nav-icon">🔔</span>
             <span>Notifications</span>
             <span class="nav-badge">2</span>
         </a>
         <div class="nav-section-label">Community</div>
-        <a href="civictrack-ward-stats.html" class="nav-item">
+        <a href="civictrack-ward-stats.php" class="nav-item">
             <span class="nav-icon">📊</span>
             <span>Ward Stats</span>
         </a>
-        <a href="civictrack-leaderboard.html" class="nav-item">
+        <a href="civictrack-leaderboard.php" class="nav-item">
             <span class="nav-icon">🏆</span>
             <span>Leaderboard</span>
         </a>
@@ -60,7 +60,7 @@
         <div class="topbar">
             <div class="topbar-title">Nearby Issues</div>
             <div class="topbar-right">
-                <a href="civictrack-notifications.html" class="notif-bell" title="Notifications">
+                <a href="civictrack-notifications.php" class="notif-bell" title="Notifications">
                     🔔<span class="notif-dot"></span>
                 </a>
                 <button class="topbar-btn" onclick="openModal()">＋ Report Issue</button>

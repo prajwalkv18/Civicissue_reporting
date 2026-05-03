@@ -1,10 +1,3 @@
-/* ============================================================
-   CivicTrack – Admin Panel  |  civictrack-admin.js
-   ============================================================ */
-
-// ──────────────────────────────────────────────────────────────
-// SAMPLE DATA
-// ──────────────────────────────────────────────────────────────
 const ISSUES = [
     { id:'#CT001', type:'Pothole',      emoji:'🕳️', reporter:'Ramesh Kumar',  phone:'+91 98200 11111', location:'MG Road, near bus stop',       ward:'Ward 42', priority:'High',   status:'pending',  date:'27 Apr 2026', icon_bg:'#fef3e2', lat:19.05950, lng:72.83540 },
     { id:'#CT002', type:'Street Light', emoji:'💡', reporter:'Anjali Singh',  phone:'+91 98200 22222', location:'Nehru Nagar junction',          ward:'Ward 42', priority:'Normal', status:'resolved', date:'22 Apr 2026', icon_bg:'#e6f4ea', lat:19.07280, lng:72.88260 },
@@ -60,38 +53,110 @@ const ACTIVITY = [
     { color:'td-blue',   text:'40 new residents registered this month.',                                            time:'1 day ago'  },
 ];
 
-// ──────────────────────────────────────────────────────────────
-// STATE
-// ──────────────────────────────────────────────────────────────
 let activeIssueId = null;
-let engineerList  = [...ENGINEERS];
-let issueList     = [...ISSUES];
-let userList      = [...USERS];
-let filteredIssues = [...ISSUES];
+let engineerList  = [];
+let issueList     = [];
+let userList      = [];
+let filteredIssues = [];
 
-// ──────────────────────────────────────────────────────────────
-// INIT
-// ──────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     setTimestamp();
-    renderActivityFeed();
-    renderIssueTable();
-    renderUsers();
-    renderEngineers();
+    fetchIssues(); // Will trigger table render and charts
+    fetchUsers();
+    fetchEngineers();
     renderWards();
     renderAlerts();
-    buildCharts();
-    updateCounters();
 });
+
+function fetchIssues() {
+    fetch('../api/issues.php?action=fetchIssues')
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            issueList = data.issues.map(i => {
+                let statusMap = { 'Open': 'pending', 'In Progress': 'progress', 'Resolved': 'resolved' };
+                let emojiMap = { 'Pothole': '🕳️', 'Street Light': '💡', 'Garbage': '🗑️', 'Water Supply': '💧', 'Road Damage': '🚧', 'Tree': '🌳' };
+                let bgMap = { 'Pothole': '#fef3e2', 'Street Light': '#e6f4ea', 'Garbage': '#fce8e6', 'Water Supply': '#e8f0fe', 'Road Damage': '#fff3e0', 'Tree': '#e6f4ea' };
+                
+                let fallbackLat = 19.05950 + (Math.random() * 0.05 - 0.025);
+                let fallbackLng = 72.83540 + (Math.random() * 0.05 - 0.025);
+                
+                return {
+                    id: '#CT' + i.id.toString().padStart(3, '0'),
+                    raw_id: i.id,
+                    type: i.issue_type,
+                    emoji: emojiMap[i.issue_type] || '📌',
+                    reporter: i.reported_by || 'Citizen',
+                    phone: '', 
+                    location: i.location_text,
+                    ward: i.ward || 'Unknown',
+                    priority: i.priority,
+                    status: statusMap[i.status] || 'pending',
+                    date: new Date(i.created_at).toLocaleDateString(),
+                    icon_bg: bgMap[i.issue_type] || '#f3f4f6',
+                    lat: i.latitude || fallbackLat,
+                    lng: i.longitude || fallbackLng
+                };
+            });
+            filteredIssues = [...issueList];
+            
+            renderActivityFeed();
+            renderIssueTable();
+            buildCharts();
+            updateCounters();
+            
+            if (mapInitialized) {
+                filterMapMarkers();
+            }
+        }
+    }).catch(e => console.error(e));
+}
+
+function fetchUsers() {
+    fetch('../api/admin.php?action=fetchUsers')
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            userList = data.users.map(u => ({
+                name: u.full_name,
+                initials: u.full_name.split(' ').map(w=>w[0]).join('').slice(0,2),
+                color: u.role === 'admin' ? 'ub-purple' : 'ub-blue',
+                phone: u.phone,
+                ward: u.ward || '-',
+                reports: parseInt(u.reports_count) || 0,
+                points: (parseInt(u.reports_count) || 0) * 10,
+                role: u.role === 'admin' ? 'Admin' : 'User',
+                joined: new Date(u.created_at).toLocaleDateString()
+            }));
+            renderUsers();
+        }
+    }).catch(e => console.error(e));
+}
+
+function fetchEngineers() {
+    fetch('../api/admin.php?action=fetchEngineers')
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            engineerList = data.engineers.map(e => ({
+                name: e.full_name,
+                id: e.employee_id,
+                ward: e.assigned_ward,
+                active: parseInt(e.active_jobs) || 0,
+                resolved: parseInt(e.resolved_jobs) || 0,
+                status: 'Active',
+                rawPhone: e.phone
+            }));
+            renderEngineers();
+        }
+    }).catch(e => console.error(e));
+}
 
 function setTimestamp() {
     document.getElementById('lastUpdated').textContent =
         new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
 }
 
-// ──────────────────────────────────────────────────────────────
-// TABS
-// ──────────────────────────────────────────────────────────────
 const tabTitles = {
     'tab-overview':  ['Dashboard Overview', 'Live summary of all civic activity'],
     'tab-issues':    ['Issue Requests',      'Review, accept or assign incoming reports'],
@@ -105,11 +170,10 @@ const tabTitles = {
 };
 
 function switchTab(el, tabId) {
-    // Deactivate all
+
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-btn, .sidebar-link').forEach(b => b.classList.remove('active'));
 
-    // Activate new
     document.getElementById(tabId).classList.add('active');
     document.querySelectorAll(`[data-tab="${tabId}"]`).forEach(b => b.classList.add('active'));
 
@@ -117,15 +181,11 @@ function switchTab(el, tabId) {
     document.getElementById('pageTitle').textContent    = title;
     document.getElementById('pageSubtitle').textContent = sub;
 
-    // Rebuild analytics charts when tab shown (sizing fix)
     if (tabId === 'tab-analytics') buildAnalyticsCharts();
-    // Show / init map
+
     if (tabId === 'tab-map') showMap();
 }
 
-// ──────────────────────────────────────────────────────────────
-// COUNTERS
-// ──────────────────────────────────────────────────────────────
 function updateCounters() {
     const pending = issueList.filter(i => i.status === 'pending').length;
     document.getElementById('pendingBadge').textContent = pending;
@@ -136,9 +196,6 @@ function updateCounters() {
     document.getElementById('s-resolved').textContent   = issueList.filter(i => i.status === 'resolved').length;
 }
 
-// ──────────────────────────────────────────────────────────────
-// ACTIVITY FEED
-// ──────────────────────────────────────────────────────────────
 function renderActivityFeed() {
     const feed = document.getElementById('activityFeed');
     feed.innerHTML = ACTIVITY.map(a => `
@@ -151,9 +208,6 @@ function renderActivityFeed() {
         </div>`).join('');
 }
 
-// ──────────────────────────────────────────────────────────────
-// ISSUE TABLE
-// ──────────────────────────────────────────────────────────────
 function renderIssueTable() {
     const sf = document.getElementById('statusFilter').value;
     const tf = document.getElementById('typeFilter').value;
@@ -228,12 +282,27 @@ function priorityBadge(p) {
 function quickStatus(id, newStatus) {
     const issue = issueList.find(i => i.id === id);
     if (!issue) return;
-    issue.status = newStatus;
-    renderIssueTable();
-    updateCounters();
-    toast(`✅ Issue ${id} → ${newStatus}`);
-    ACTIVITY.unshift({ color: newStatus==='resolved'?'td-green':'td-blue', text:`Issue <strong>${id}</strong> marked <strong>${newStatus}</strong>.`, time:'Just now' });
-    renderActivityFeed();
+    
+    const formData = new FormData();
+    formData.append('action', 'updateIssueStatus');
+    formData.append('issue_id', issue.raw_id);
+    formData.append('status', newStatus);
+    
+    fetch('../api/admin.php', { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            issue.status = newStatus;
+            renderIssueTable();
+            updateCounters();
+            toast(`✅ Issue ${id} → ${newStatus}`);
+            ACTIVITY.unshift({ color: newStatus==='resolved'?'td-green':'td-blue', text:`Issue <strong>${id}</strong> marked <strong>${newStatus}</strong>.`, time:'Just now' });
+            renderActivityFeed();
+            if (mapInitialized) filterMapMarkers();
+        } else {
+            toast('⚠️ Error: ' + data.message);
+        }
+    });
 }
 
 function viewIssue(id) {
@@ -242,9 +311,6 @@ function viewIssue(id) {
     openAssignModal(id);
 }
 
-// ──────────────────────────────────────────────────────────────
-// USERS TABLE
-// ──────────────────────────────────────────────────────────────
 function renderUsers() {
     const rf = document.getElementById('roleFilter').value;
     const list = userList.filter(u => rf === 'all' || u.role === rf);
@@ -274,9 +340,6 @@ function renderUsers() {
         </tr>`).join('');
 }
 
-// ──────────────────────────────────────────────────────────────
-// ENGINEERS TABLE
-// ──────────────────────────────────────────────────────────────
 function renderEngineers() {
     document.getElementById('engTableBody').innerHTML = engineerList.map(e => `
         <tr>
@@ -316,9 +379,6 @@ function removeEng(id) {
     toast('🗑️ Engineer removed');
 }
 
-// ──────────────────────────────────────────────────────────────
-// WARDS TABLE
-// ──────────────────────────────────────────────────────────────
 function renderWards() {
     document.getElementById('wardTableBody').innerHTML = WARDS.map(w => {
         const h = w.health;
@@ -343,9 +403,6 @@ function renderWards() {
     }).join('');
 }
 
-// ──────────────────────────────────────────────────────────────
-// ALERTS
-// ──────────────────────────────────────────────────────────────
 function renderAlerts() {
     const colors = { error:'#fce8e6', warning:'#fef3e2', info:'#e8f0fe', success:'#e6f4ea' };
     document.getElementById('alertList').innerHTML = ALERTS.map((a,i) => `
@@ -370,9 +427,6 @@ function markAllRead() {
     toast('✅ All alerts marked as read');
 }
 
-// ──────────────────────────────────────────────────────────────
-// ASSIGN MODAL
-// ──────────────────────────────────────────────────────────────
 function openAssignModal(id) {
     activeIssueId = id || null;
     if (id) {
@@ -405,22 +459,38 @@ function saveAssignment() {
     if (activeIssueId) {
         const issue = issueList.find(i => i.id === activeIssueId);
         if (issue) {
-            issue.status = status;
-            renderIssueTable();
-            updateCounters();
-            ACTIVITY.unshift({ color:'td-blue', text:`Issue <strong>${activeIssueId}</strong> ${eng ? `assigned to <strong>${eng.split(' ')[0]}</strong>` : 'updated'} → <strong>${status}</strong>.${note?' Note added.':''}`, time:'Just now' });
-            renderActivityFeed();
+            const formData = new FormData();
+            formData.append('action', 'updateIssueStatus');
+            formData.append('issue_id', issue.raw_id);
+            formData.append('status', status);
+            formData.append('engineer', eng);
+            formData.append('note', note);
+            
+            fetch('../api/admin.php', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    issue.status = status;
+                    renderIssueTable();
+                    updateCounters();
+                    ACTIVITY.unshift({ color:'td-blue', text:`Issue <strong>${activeIssueId}</strong> ${eng ? `assigned to <strong>${eng.split(' ')[0]}</strong>` : 'updated'} → <strong>${status}</strong>.${note?' Note added.':''}`, time:'Just now' });
+                    renderActivityFeed();
+                    if (mapInitialized) filterMapMarkers();
+                    
+                    closeModal();
+                    toast(eng
+                        ? `✅ Assigned to ${eng.split(' (')[0]} · Status: ${status}`
+                        : `✅ Status updated to ${status}`);
+                } else {
+                    toast('⚠️ Error: ' + data.message);
+                }
+            });
         }
+    } else {
+        closeModal();
     }
-    closeModal();
-    toast(eng
-        ? `✅ Assigned to ${eng.split(' (')[0]} · Status: ${status}`
-        : `✅ Status updated to ${status}`);
 }
 
-// ──────────────────────────────────────────────────────────────
-// ENGINEER MODAL
-// ──────────────────────────────────────────────────────────────
 function openAddEngModal() {
     document.getElementById('engModal').classList.add('open');
 }
@@ -432,26 +502,35 @@ function addEngineer() {
     const id    = document.getElementById('eng-id').value.trim();
     const ward  = document.getElementById('eng-ward').value;
     const phone = document.getElementById('eng-phone').value.trim();
-    if (!name || !id) { toast('⚠️ Name and ID are required'); return; }
-    engineerList.push({ name, id, ward, phone, active:0, resolved:0, status:'Active' });
-    renderEngineers();
-    closeEngModal();
-    toast(`✅ Engineer ${name} added`);
-    document.getElementById('eng-name').value = '';
-    document.getElementById('eng-id').value   = '';
-    document.getElementById('eng-phone').value = '';
+    if (!name || !id || !phone) { toast('⚠️ Name, ID, and Phone are required'); return; }
+    
+    const formData = new FormData();
+    formData.append('action', 'addEngineer');
+    formData.append('name', name);
+    formData.append('emp_id', id);
+    formData.append('ward', ward);
+    formData.append('phone', phone);
+    
+    fetch('../api/admin.php', { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            toast(`✅ Engineer ${name} added`);
+            document.getElementById('eng-name').value = '';
+            document.getElementById('eng-id').value   = '';
+            document.getElementById('eng-phone').value = '';
+            closeEngModal();
+            fetchEngineers();
+        } else {
+            toast('⚠️ Error: ' + data.message);
+        }
+    }).catch(e => toast('⚠️ Network error'));
 }
 
-// ──────────────────────────────────────────────────────────────
-// GLOBAL SEARCH
-// ──────────────────────────────────────────────────────────────
 function globalSearchFn(q) {
     renderIssueTable();
 }
 
-// ──────────────────────────────────────────────────────────────
-// EXPORT CSV
-// ──────────────────────────────────────────────────────────────
 function exportCSV() {
     const headers = ['ID','Type','Reporter','Location','Ward','Priority','Status','Date'];
     const rows    = filteredIssues.map(i =>
@@ -465,9 +544,6 @@ function exportCSV() {
     toast('📤 CSV exported!');
 }
 
-// ──────────────────────────────────────────────────────────────
-// SETTINGS
-// ──────────────────────────────────────────────────────────────
 function saveSettings() {
     const name = document.getElementById('set-adminName').value.trim() || 'Admin';
     document.getElementById('adminNameDisplay').textContent = name;
@@ -475,9 +551,6 @@ function saveSettings() {
     toast('💾 Settings saved!');
 }
 
-// ──────────────────────────────────────────────────────────────
-// CHARTS
-// ──────────────────────────────────────────────────────────────
 const CHART_COLORS = {
     green:  'rgba(45,106,79,0.8)',
     orange: 'rgba(244,144,12,0.8)',
@@ -492,7 +565,6 @@ function buildCharts() {
     if (chartsBuilt) return;
     chartsBuilt = true;
 
-    // Weekly bar chart
     new Chart(document.getElementById('chartWeekly'), {
         type:'bar',
         data:{
@@ -507,13 +579,27 @@ function buildCharts() {
         options:{ plugins:{ legend:{ display:false } }, responsive:true, scales:{ y:{ beginAtZero:true, grid:{ color:'#f0f0f0' } } } }
     });
 
-    // Category doughnut
+    const typeCounts = {
+        'Pothole': 0, 'Street Light': 0, 'Garbage': 0, 'Water Supply': 0, 'Road Damage': 0, 'Tree': 0, 'Other': 0
+    };
+    
+    issueList.forEach(i => {
+        if (typeCounts[i.type] !== undefined) {
+            typeCounts[i.type]++;
+        } else {
+            typeCounts['Other']++;
+        }
+    });
+
     new Chart(document.getElementById('chartCategory'), {
         type:'doughnut',
         data:{
             labels:['Pothole','Street Light','Garbage','Water','Road Damage','Tree','Other'],
             datasets:[{
-                data:[35,20,18,12,8,5,2],
+                data:[
+                    typeCounts['Pothole'], typeCounts['Street Light'], typeCounts['Garbage'], 
+                    typeCounts['Water Supply'], typeCounts['Road Damage'], typeCounts['Tree'], typeCounts['Other']
+                ],
                 backgroundColor:['#F4900C','#1a73e8','#C0392B','#2D6A4F','#7c3aed','#0e7490','#6b7280'],
                 borderWidth:2,
             }]
@@ -527,7 +613,6 @@ function buildAnalyticsCharts() {
     if (analyticsChartsBuilt) return;
     analyticsChartsBuilt = true;
 
-    // Monthly trend
     new Chart(document.getElementById('chartMonthly'), {
         type:'line',
         data:{
@@ -540,7 +625,6 @@ function buildAnalyticsCharts() {
         options:{ responsive:true, plugins:{ legend:{ position:'top' } }, scales:{ y:{ beginAtZero:true, grid:{ color:'#f0f0f0' } } } }
     });
 
-    // Resolution rate horizontal bar
     new Chart(document.getElementById('chartResolution'), {
         type:'bar',
         data:{
@@ -550,7 +634,6 @@ function buildAnalyticsCharts() {
         options:{ indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ max:100, grid:{ color:'#f0f0f0' } } } }
     });
 
-    // Ward heatmap (grouped bar)
     new Chart(document.getElementById('chartWard'), {
         type:'bar',
         data:{
@@ -565,9 +648,6 @@ function buildAnalyticsCharts() {
     });
 }
 
-// ──────────────────────────────────────────────────────────────
-// TOAST
-// ──────────────────────────────────────────────────────────────
 function toast(msg) {
     const t = document.getElementById('adminToast');
     t.textContent = msg;
@@ -576,17 +656,13 @@ function toast(msg) {
     toast._timer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ──────────────────────────────────────────────────────────────
-// LOGOUT
-// ──────────────────────────────────────────────────────────────
 function logout() {
     if (confirm('Sign out of admin panel?')) {
         sessionStorage.clear();
-        window.location.href = 'civictrack_login.html';
+        window.location.href = 'civictrack_login.php';
     }
 }
 
-// Close modals on backdrop click
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', function(e) {
         if (e.target === this) {
@@ -595,15 +671,11 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
     });
 });
 
-// ──────────────────────────────────────────────────────────────
-// GOOGLE MAPS INTEGRATION
-// ──────────────────────────────────────────────────────────────
 let gmap          = null;
-let mapMarkers    = [];   // { marker, infoWindow, issue }
+let mapMarkers    = [];
 let activeInfoWin = null;
 let mapInitialized = false;
 
-// Colour per status
 const MARKER_COLORS = {
     pending:  '#e67e22',
     progress: '#1a73e8',
@@ -611,9 +683,8 @@ const MARKER_COLORS = {
     rejected: '#C0392B',
 };
 
-// Called by Google Maps API callback=initMap
 function initMap() {
-    // Detect placeholder key – show banner instead
+
     const scriptSrc = document.querySelector('script[src*="maps.googleapis.com"]')?.src || '';
     if (scriptSrc.includes('YOUR_GOOGLE_MAPS_API_KEY')) {
         document.getElementById('noKeyBanner').classList.add('visible');
@@ -640,14 +711,12 @@ function initMap() {
     mapInitialized = true;
 }
 
-// Called when map tab becomes active
 function showMap() {
-    if (!mapInitialized) return;          // initMap not yet done – API still loading; it will call itself
+    if (!mapInitialized) return;
     google.maps.event.trigger(gmap, 'resize');
     centerMap();
 }
 
-// Build an SVG pin element for a given status colour
 function makePinSvg(color, emoji) {
     const encodedEmoji = encodeURIComponent(emoji);
     const svg = `
@@ -661,9 +730,8 @@ function makePinSvg(color, emoji) {
     return URL.createObjectURL(blob);
 }
 
-// Place markers for a given set of issues
 function placeMakers(issues) {
-    // Clear old markers
+
     mapMarkers.forEach(m => m.marker.setMap(null));
     mapMarkers = [];
     if (activeInfoWin) { activeInfoWin.close(); activeInfoWin = null; }
@@ -718,7 +786,7 @@ function placeMakers(issues) {
             if (activeInfoWin) activeInfoWin.close();
             infoWindow.open(gmap, marker);
             activeInfoWin = infoWindow;
-            // Highlight sidebar row
+
             document.querySelectorAll('.map-issue-row').forEach(r => r.style.background = '');
             const row = document.getElementById('mir-' + issue.id.replace('#',''));
             if (row) { row.style.background = '#f4f9f0'; row.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
@@ -728,7 +796,6 @@ function placeMakers(issues) {
     });
 }
 
-// Sidebar list of visible issues
 function renderMapSideList(issues) {
     const el = document.getElementById('mapIssueList');
     if (!el) return;
@@ -755,7 +822,6 @@ function panToIssue(id) {
     activeInfoWin = entry.infoWindow;
 }
 
-// Update the floating stats panel
 function updateMapStats(issues) {
     const count = s => issues.filter(i => i.status === s).length;
     const el = id => document.getElementById(id);
@@ -766,7 +832,6 @@ function updateMapStats(issues) {
     if (el('mpRejected')) el('mpRejected').textContent = count('rejected');
 }
 
-// Filter markers based on toolbar dropdowns
 function filterMapMarkers() {
     if (!mapInitialized) return;
     const sf = document.getElementById('mapStatusFilter').value;
@@ -781,25 +846,21 @@ function filterMapMarkers() {
     updateMapStats(visible);
 }
 
-// Re-center & reset zoom to Mumbai
 function centerMap() {
     if (!gmap) return;
     gmap.panTo({ lat: 19.0638, lng: 72.8601 });
     gmap.setZoom(13);
 }
 
-// Refresh – re-place all markers
 function refreshMapMarkers() {
     if (!mapInitialized) return;
     filterMapMarkers();
     toast('🔄 Map refreshed!');
 }
 
-// Quick accept/reject from info window
 function mapQuickStatus(id, newStatus) {
     quickStatus(id, newStatus);
     if (activeInfoWin) activeInfoWin.close();
-    // Give DOM time to update then re-filter
+
     setTimeout(() => filterMapMarkers(), 100);
 }
-

@@ -9,16 +9,25 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="civictrack-admin.css">
-    <!-- Chart.js CDN -->
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <!-- Google Maps JavaScript API
-         IMPORTANT: Replace YOUR_GOOGLE_MAPS_API_KEY below with your actual API key.
-         Get one free at: https://console.cloud.google.com/google/maps-apis
-         Enable: Maps JavaScript API + Geocoding API
-    -->
+    
     <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap&libraries=marker" async defer></script>
     <style>
-        /* ── Map Tab overrides ── */
+        .exit-admin-link {
+            margin: 8px 12px 4px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #e8f5e9, #f0fdf4);
+            border: 1.5px solid #a7d7a0;
+            color: #2D6A4F !important;
+            font-weight: 600;
+            transition: background .2s, box-shadow .2s;
+        }
+        .exit-admin-link:hover {
+            background: linear-gradient(135deg, #c8e6c9, #dcf5e0);
+            box-shadow: 0 2px 8px rgba(45,106,79,.18);
+        }
+        
         #tab-map { margin: -28px; }
         .map-shell {
             display: flex;
@@ -41,7 +50,7 @@
             position: relative;
         }
         #gmap { width:100%; height:100%; }
-        /* Floating panels */
+        
         .map-float {
             position: absolute;
             z-index: 5;
@@ -90,7 +99,7 @@
         .mir-emoji { font-size:18px; }
         .mir-title { font-weight:600; color:#1a1a1a; }
         .mir-sub { color:#6b7280; font-size:11px; }
-        /* No-key banner */
+        
         #noKeyBanner {
             display:none;
             position:absolute; inset:0;
@@ -109,9 +118,6 @@
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════
-     SIDEBAR
-═══════════════════════════════════════════════════════════ -->
 <aside class="admin-sidebar" id="adminSidebar">
     <div class="sidebar-brand">
         <img src="logo.jpg" alt="CivicTrack">
@@ -153,6 +159,10 @@
         <span class="s-icon">⚙️</span><span>Settings</span>
     </a>
 
+    <a class="sidebar-link exit-admin-link" href="civictrack-dashboard.php" id="exitAdminBtn">
+        <span class="s-icon">🏠</span><span>Exit to Dashboard</span>
+    </a>
+
     <div class="sidebar-footer">
         <div class="admin-avatar" id="adminAvatar">A</div>
         <div>
@@ -163,12 +173,9 @@
     </div>
 </aside>
 
-<!-- ═══════════════════════════════════════════════════════════
-     MAIN
-═══════════════════════════════════════════════════════════ -->
 <main class="admin-main">
 
-    <!-- Top Bar -->
+    
     <div class="admin-topbar">
         <div class="topbar-left">
             <h1 id="pageTitle">Dashboard Overview</h1>
@@ -183,14 +190,15 @@
             <button class="icon-btn" title="Notifications">
                 🔔<span class="dot"></span>
             </button>
+            <a href="civictrack-dashboard.php" class="outline-btn" id="topbarExitBtn" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;">🏠 Dashboard</a>
             <button class="primary-btn" onclick="openAssignModal()">＋ Add Issue</button>
         </div>
     </div>
 
-    <!-- Body -->
+    
     <div class="admin-body">
 
-        <!-- TAB NAV -->
+        
         <div class="tab-bar">
             <button class="tab-btn active" data-tab="tab-overview"   onclick="switchTab(this,'tab-overview')">📊 Overview</button>
             <button class="tab-btn"        data-tab="tab-issues"     onclick="switchTab(this,'tab-issues')">📋 Requests <span class="tb" id="reqCount">7</span></button>
@@ -203,7 +211,7 @@
             <button class="tab-btn"        data-tab="tab-settings"   onclick="switchTab(this,'tab-settings')">⚙️ Settings</button>
         </div>
 
-        <!-- ─── TAB: OVERVIEW ─── -->
+        
         <div class="tab-content active" id="tab-overview">
             <div class="stats-row">
                 <div class="stat-card">
@@ -272,7 +280,7 @@
                 </div>
             </div>
 
-            <!-- Charts row -->
+            
             <div class="charts-grid">
                 <div class="chart-card">
                     <div class="chart-header">
@@ -289,19 +297,19 @@
                 </div>
             </div>
 
-            <!-- Recent Activity -->
+            
             <div class="card">
                 <div class="card-header">
                     <h3>Recent Activity</h3>
                     <span style="font-size:12px;color:var(--text-muted);">Live feed</span>
                 </div>
                 <div class="timeline" id="activityFeed">
-                    <!-- populated by JS -->
+                    
                 </div>
             </div>
         </div>
 
-        <!-- ─── TAB: ISSUE REQUESTS ─── -->
+        
         <div class="tab-content" id="tab-issues">
             <div class="card">
                 <div class="card-header">
@@ -357,11 +365,11 @@
             </div>
         </div>
 
-        <!-- ─── TAB: LIVE MAP ─── -->
+        
         <div class="tab-content" id="tab-map">
             <div class="map-shell">
 
-                <!-- Map toolbar -->
+                
                 <div class="map-topbar">
                     <h3>🗺️ Live Issue Map</h3>
 
@@ -388,18 +396,18 @@
                     <button class="primary-btn" onclick="exportCSV()">📤 Export</button>
                 </div>
 
-                <!-- Map container -->
+                
                 <div id="mapContainer">
 
-                    <!-- Actual Google Map -->
+                    
                     <div id="gmap"></div>
 
-                    <!-- No API key banner (shown when key is placeholder) -->
+                    
                     <div id="noKeyBanner">
                         <div class="nb-icon">🗺️</div>
                         <h2>Google Maps API Key Required</h2>
                         <p>
-                            Open <strong>civictrack-admin.html</strong> and replace
+                            Open <strong>civictrack-admin.php</strong> and replace
                             <code>YOUR_GOOGLE_MAPS_API_KEY</code> in the
                             <code>&lt;script&gt;</code> tag with your real key.
                             <br><br>
@@ -411,7 +419,7 @@
                         </p>
                     </div>
 
-                    <!-- Floating stats panel (top-left) -->
+                    
                     <div class="map-float map-stats-panel" id="mapStatsPanel">
                         <div class="sp-title">📍 Map Summary</div>
                         <div class="map-stat-row">
@@ -436,7 +444,7 @@
                         </div>
                     </div>
 
-                    <!-- Legend (bottom-left) -->
+                    
                     <div class="map-float map-legend">
                         <div class="sp-title">Legend</div>
                         <div class="legend-row"><div class="legend-dot" style="background:#e67e22;"></div>Pending</div>
@@ -445,17 +453,17 @@
                         <div class="legend-row"><div class="legend-dot" style="background:#C0392B;"></div>Rejected</div>
                     </div>
 
-                    <!-- Issue list sidebar (top-right) -->
+                    
                     <div class="map-float map-key-panel" id="mapSideList">
                         <div class="map-key-header"><h4>📋 Issue List</h4></div>
-                        <div id="mapIssueList"><!-- filled by JS --></div>
+                        <div id="mapIssueList"></div>
                     </div>
 
-                </div><!-- /#mapContainer -->
-            </div><!-- /.map-shell -->
+                </div>
+            </div>
         </div>
 
-        <!-- ─── TAB: USERS ─── -->
+        
         <div class="tab-content" id="tab-users">
             <div class="card">
                 <div class="card-header">
@@ -489,7 +497,7 @@
             </div>
         </div>
 
-        <!-- ─── TAB: ENGINEERS ─── -->
+        
         <div class="tab-content" id="tab-engineers">
             <div class="card">
                 <div class="card-header">
@@ -515,7 +523,7 @@
             </div>
         </div>
 
-        <!-- ─── TAB: WARDS ─── -->
+        
         <div class="tab-content" id="tab-wards">
             <div class="card">
                 <div class="card-header">
@@ -541,7 +549,7 @@
             </div>
         </div>
 
-        <!-- ─── TAB: ANALYTICS ─── -->
+        
         <div class="tab-content" id="tab-analytics">
             <div class="stats-row">
                 <div class="stat-card">
@@ -577,7 +585,7 @@
             </div>
         </div>
 
-        <!-- ─── TAB: ALERTS ─── -->
+        
         <div class="tab-content" id="tab-alerts">
             <div class="card">
                 <div class="card-header">
@@ -585,12 +593,12 @@
                     <button class="outline-btn" onclick="markAllRead()">✅ Mark All Read</button>
                 </div>
                 <div id="alertList">
-                    <!-- populated by JS -->
+                    
                 </div>
             </div>
         </div>
 
-        <!-- ─── TAB: SETTINGS ─── -->
+        
         <div class="tab-content" id="tab-settings">
             <div class="settings-grid">
                 <div class="card">
@@ -652,12 +660,9 @@
             </div>
         </div>
 
-    </div><!-- /.admin-body -->
+    </div>
 </main>
 
-<!-- ═══════════════════════════════════════════════════════════
-     ASSIGN / DETAIL MODAL
-═══════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="assignModal">
     <div class="modal">
         <div class="modal-head">
@@ -705,7 +710,6 @@
     </div>
 </div>
 
-<!-- Add Engineer Modal -->
 <div class="modal-overlay" id="engModal">
     <div class="modal">
         <div class="modal-head">
@@ -740,7 +744,47 @@
     </div>
 </div>
 
-<!-- Toast -->
+<div class="modal-overlay" id="engDetailsModal">
+    <div class="modal">
+        <div class="modal-head">
+            <h3>Engineer Details</h3>
+            <button class="modal-close" onclick="closeEngDetailsModal()">✕</button>
+        </div>
+        <div class="modal-content">
+            <div style="display:flex;align-items:center;gap:15px;margin-bottom:20px;">
+                <div class="user-ball ub-blue" style="width:50px;height:50px;font-size:20px;" id="det-initials"></div>
+                <div>
+                    <h2 style="margin:0;font-size:18px;color:#1a1a1a;" id="det-name"></h2>
+                    <div style="color:#666;font-size:13px;margin-top:2px;" id="det-id"></div>
+                </div>
+            </div>
+            
+            <div class="stats-row" style="margin-bottom:20px;">
+                <div class="stat-card" style="padding:15px;min-width:auto;">
+                    <div class="s-num" id="det-active" style="font-size:20px;color:#1a73e8;"></div>
+                    <div class="s-label">Active Jobs</div>
+                </div>
+                <div class="stat-card" style="padding:15px;min-width:auto;">
+                    <div class="s-num" id="det-resolved" style="font-size:20px;color:#2D6A4F;"></div>
+                    <div class="s-label">Resolved</div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <div style="font-weight:500;background:#f8f9fb;padding:10px 12px;border-radius:6px;border:1px solid #e5e7eb;" id="det-phone"></div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Assigned Ward</label>
+                <div style="font-weight:500;background:#f8f9fb;padding:10px 12px;border-radius:6px;border:1px solid #e5e7eb;" id="det-ward"></div>
+            </div>
+            <div class="modal-actions" style="margin-top:10px;">
+                <button class="btn-full btn-cancel" onclick="closeEngDetailsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="admin-toast" id="adminToast"></div>
 
 <script src="civictrack-admin.js"></script>

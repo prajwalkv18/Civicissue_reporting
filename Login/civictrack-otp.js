@@ -1,69 +1,168 @@
 let currentScreen = 1;
 let isNewUser     = true;
 let currentLang   = 'en';
-
-let emailInput, passwordInput, loginError;
+let simulatedOtp  = '';
+let resendInterval = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    emailInput    = document.getElementById('emailInput');
-    passwordInput = document.getElementById('passwordInput');
-    loginError    = document.getElementById('loginError');
-
-    // Add enter key pressed triggers
-    emailInput.addEventListener('keypress', function(event) {
-        if (event.key === "Enter") passwordInput.focus();
+    document.getElementById('phoneInput').addEventListener('keypress', e => {
+        if (e.key === 'Enter') sendOtp();
     });
-    passwordInput.addEventListener('keypress', function(event) {
-        if (event.key === "Enter") attemptLogin();
-    });
+    initOtpBoxes();
 });
 
-function validateEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
+function initOtpBoxes() {
+    const boxes = document.querySelectorAll('.otp-box');
+    boxes.forEach((box, idx) => {
+        box.addEventListener('input', () => {
+            box.value = box.value.replace(/\D/g, '').slice(0, 1);
+            if (box.value && idx < boxes.length - 1) boxes[idx + 1].focus();
+        });
+        box.addEventListener('keydown', e => {
+            if (e.key === 'Backspace' && !box.value && idx > 0) boxes[idx - 1].focus();
+            if (e.key === 'Enter') verifyOtp();
+        });
+        box.addEventListener('paste', e => {
+            e.preventDefault();
+            const digits = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+            digits.split('').forEach((d, i) => { if (boxes[i]) boxes[i].value = d; });
+            const next = Math.min(digits.length, boxes.length - 1);
+            boxes[next].focus();
+        });
+    });
 }
 
-function attemptLogin() {
-    const email = emailInput.value.trim();
-    const pass  = passwordInput.value.trim();
-    
-    // Simple simulated backend validation
-    if (!validateEmail(email) || pass.length < 6) {
-        emailInput.classList.add('invalid');
-        passwordInput.classList.add('invalid');
-        loginError.style.display = 'block';
+function sendOtp() {
+    const phone = document.getElementById('phoneInput').value.trim();
+    const error = document.getElementById('phoneError');
+
+    if (!/^\d{10}$/.test(phone)) {
+        document.getElementById('phoneInput').classList.add('invalid');
+        error.style.display = 'block';
         return;
     }
-    
-    // In a real app, you would verify email/pass with a backend here.
-    // For now, any well-formatted email and 6+ char password passes.
-    emailInput.classList.remove('invalid');
-    passwordInput.classList.remove('invalid');
-    loginError.style.display = 'none';
-    
-    // Save email in session
-    sessionStorage.setItem('ct_email', email);
 
-    // Disable button during "loading"
-    const btn = document.getElementById('signInBtn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = currentLang === 'en' ? 'Authenticating...' : 'प्रमाणित किया जा रहा है...';
+    document.getElementById('phoneInput').classList.remove('invalid');
+    error.style.display = 'none';
+
+    const btn = document.getElementById('sendOtpBtn');
+    const label = currentLang === 'en' ? 'Sending…' : 'भेज रहे हैं…';
+    btn.innerHTML = `<span>${label}</span>`;
     btn.disabled = true;
 
-    // Simulate network delay
-    setTimeout(() => {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        
-        // If the email simulates an existing user, we could skip screen 2 (registration)
-        // Here we default to new user flows.
-        if (isNewUser) {
+    // Check if user exists in the database
+    const formData = new FormData();
+    formData.append('action', 'checkUser');
+    formData.append('phone', phone);
+
+    fetch('../api/auth.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            isNewUser = data.isNewUser;
+            sessionStorage.setItem('ct_phone', '+91' + phone);
+            if (!isNewUser && data.user) {
+                sessionStorage.setItem('ct_name', data.user.full_name);
+                sessionStorage.setItem('ct_role', data.user.role);
+            }
+
+            simulatedOtp = String(Math.floor(100000 + Math.random() * 900000));
+            
+            const subtitle = document.getElementById('otpSubtitle');
+            const maskedPhone = phone.slice(0, 2) + 'XXXXXX' + phone.slice(-2);
+            const enText = `Enter the 6-digit code sent to +91 ${maskedPhone}`;
+            const hiText = `+91 ${maskedPhone} पर भेजा गया 6-अंकीय कोड दर्ज करें`;
+            subtitle.setAttribute('data-en', enText);
+            subtitle.setAttribute('data-hi', hiText);
+            subtitle.innerText = currentLang === 'en' ? enText : hiText;
+
+            btn.innerHTML = `<span data-en="Send OTP" data-hi="OTP भेजें">${currentLang === 'en' ? 'Send OTP' : 'OTP भेजें'}</span>`;
+            btn.disabled = false;
+            
+            alert(`[Demo] Your OTP is: ${simulatedOtp}`);
             goToScreen(2);
+            startResendTimer();
+            setTimeout(() => {
+                const firstOtpBox = document.getElementById('o1');
+                if(firstOtpBox) firstOtpBox.focus();
+            }, 100);
         } else {
-            // Suppose returning users skip to dashboard immediately
-            finish('Returning User');
+            alert(data.message || "An error occurred");
+            btn.innerHTML = `<span data-en="Send OTP" data-hi="OTP भेजें">${currentLang === 'en' ? 'Send OTP' : 'OTP भेजें'}</span>`;
+            btn.disabled = false;
         }
-    }, 800);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        btn.innerHTML = `<span data-en="Send OTP" data-hi="OTP भेजें">${currentLang === 'en' ? 'Send OTP' : 'OTP भेजें'}</span>`;
+        btn.disabled = false;
+    });
+}
+
+function verifyOtp() {
+    const boxes = document.querySelectorAll('.otp-box');
+    const entered = Array.from(boxes).map(b => b.value).join('');
+    const error = document.getElementById('otpError');
+
+    if (entered.length < 6) {
+        boxes.forEach(b => b.classList.add('invalid'));
+        error.style.display = 'block';
+        return;
+    }
+
+    if (entered !== simulatedOtp) {
+        boxes.forEach(b => { b.classList.add('invalid'); b.value = ''; });
+        error.style.display = 'block';
+        boxes[0].focus();
+        return;
+    }
+
+    boxes.forEach(b => b.classList.remove('invalid'));
+    error.style.display = 'none';
+    clearInterval(resendInterval);
+
+    const btn = document.getElementById('verifyOtpBtn');
+    btn.innerHTML = `<span>${currentLang === 'en' ? 'Verified ✓' : 'सत्यापित ✓'}</span>`;
+    btn.disabled = true;
+
+    setTimeout(() => {
+        if (isNewUser) {
+            goToScreen(3);
+        } else {
+            finish('User');
+        }
+    }, 600);
+}
+
+function resendOtp() {
+    simulatedOtp = String(Math.floor(100000 + Math.random() * 900000));
+    alert(`[Demo] Your new OTP is: ${simulatedOtp}`);
+    document.querySelectorAll('.otp-box').forEach(b => { b.value = ''; b.classList.remove('invalid'); });
+    document.getElementById('otpError').style.display = 'none';
+    document.getElementById('o1').focus();
+    startResendTimer();
+}
+
+function startResendTimer() {
+    clearInterval(resendInterval);
+    let seconds = 30;
+    const resendBtn = document.getElementById('resendBtn');
+    const timerEl = document.getElementById('resendTimer');
+    resendBtn.disabled = true;
+    timerEl.textContent = seconds;
+
+    resendInterval = setInterval(() => {
+        seconds--;
+        timerEl.textContent = seconds;
+        if (seconds <= 0) {
+            clearInterval(resendInterval);
+            resendBtn.disabled = false;
+            timerEl.textContent = '';
+        }
+    }, 1000);
 }
 
 function validateName() {
@@ -92,20 +191,16 @@ function goToScreen(num) {
         next.classList.add('active');
     }
 
-    // Update progress dots (3 dots for 3 screens)
-    if (num <= 3) {
-        for (let i = 1; i <= 3; i++) {
-            const d = document.getElementById(`dot-${i}`);
-            if (d) {
-                if (i < num)        d.className = 'dot completed';
-                else if (i === num) d.className = 'dot active';
-                else                d.className = 'dot';
-            }
+    for (let i = 1; i <= 4; i++) {
+        const d = document.getElementById(`dot-${i}`);
+        if (d) {
+            if (i < num)        d.className = 'dot completed';
+            else if (i === num) d.className = 'dot active';
+            else                d.className = 'dot';
         }
     }
 
-    // Auto focus the first input on the new screen
-    if (num === 2) setTimeout(() => document.getElementById('fullName').focus(), 420);
+    if (num === 3) setTimeout(() => document.getElementById('fullName').focus(), 420);
 }
 
 function submitRegistration() {
@@ -115,32 +210,62 @@ function submitRegistration() {
         document.getElementById('nameError').style.display = 'block';
         return;
     }
-    const name     = nameEl.value.trim();
-    const ward     = document.getElementById('locality').value.trim() || 'Ward 42';
-    const city     = document.getElementById('city').value.trim()     || 'Mumbai';
-
-    sessionStorage.setItem('ct_name',  name);
-    sessionStorage.setItem('ct_ward',  ward);
-    sessionStorage.setItem('ct_city',  city);
-
-    const title = document.getElementById('successTitle');
-    if (title) {
-        title.innerText = currentLang === 'en' ? `Welcome, ${name}!` : `स्वागत है, ${name}!`;
-    }
+    const name = nameEl.value.trim();
+    const ward = document.getElementById('locality').value.trim() || 'Ward 42';
+    const city = document.getElementById('city').value.trim()     || 'Mumbai';
+    const optIn = document.getElementById('whatsappOptIn') ? document.getElementById('whatsappOptIn').checked : false;
     
-    goToScreen(3);
-    finish(name);
+    // Get phone without +91 for DB
+    let phone = sessionStorage.getItem('ct_phone') || '';
+    if(phone.startsWith('+91')) phone = phone.substring(3);
+
+    const formData = new FormData();
+    formData.append('action', 'registerUser');
+    formData.append('phone', phone);
+    formData.append('full_name', name);
+    formData.append('ward', ward);
+    formData.append('city', city);
+    formData.append('whatsapp_opt_in', optIn);
+
+    fetch('../api/auth.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            sessionStorage.setItem('ct_name', name);
+            sessionStorage.setItem('ct_ward', ward);
+            sessionStorage.setItem('ct_city', city);
+            sessionStorage.setItem('ct_role', 'resident');
+
+            const title = document.getElementById('successTitle');
+            if (title) {
+                title.innerText = currentLang === 'en' ? `Welcome, ${name}!` : `स्वागत है, ${name}!`;
+                title.setAttribute('data-en', `Welcome, ${name}!`);
+                title.setAttribute('data-hi', `स्वागत है, ${name}!`);
+            }
+
+            goToScreen(4);
+            finish(name);
+        } else {
+            alert(data.message || "Registration failed");
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("An error occurred during registration");
+    });
 }
 
 function finish(name) {
     const progress = document.querySelector('.progress');
     const controls = document.querySelector('.controls');
-    if(progress) progress.style.display = 'none';
-    if(controls) controls.style.display = 'none';
-    
-    console.log('[CivicTrack] Flow complete – user authenticated via Email:', name || 'returning user');
+    if (progress) progress.style.display = 'none';
+    if (controls) controls.style.display = 'none';
+
     setTimeout(() => {
-        window.location.href = '../Dashboard/civictrack-dashboard.html';
+        window.location.href = 'civictrack-dashboard.php';
     }, 2000);
 }
 
@@ -148,7 +273,7 @@ function toggleLanguage() {
     currentLang = currentLang === 'en' ? 'hi' : 'en';
     const btn = document.getElementById('langBtn');
     if (btn) btn.innerText = currentLang === 'en' ? 'हिन्दी' : 'English';
-    
+
     document.querySelectorAll('[data-en]').forEach(el => {
         const v = el.getAttribute(`data-${currentLang}`);
         if (v) el.innerText = v;
