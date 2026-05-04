@@ -35,7 +35,7 @@
         <a href="civictrack-notifications.php" class="nav-item">
             <span class="nav-icon">🔔</span>
             <span>Notifications</span>
-            <span class="nav-badge">2</span>
+            <span class="nav-badge" id="notifBadge">0</span>
         </a>
 
         <div class="nav-section-label">Community</div>
@@ -107,22 +107,22 @@
                 <div class="stat-card">
                     <div class="stat-icon green">✅</div>
                     <div>
-                        <div class="stat-num">1</div>
+                        <div class="stat-num" id="statResolved">0</div>
                         <div class="stat-label">Resolved</div>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon orange">⏳</div>
                     <div>
-                        <div class="stat-num">2</div>
+                        <div class="stat-num" id="statInProgress">0</div>
                         <div class="stat-label">In Progress</div>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon red">⚠️</div>
                     <div>
-                        <div class="stat-num">0</div>
-                        <div class="stat-label">Overdue</div>
+                        <div class="stat-num" id="statOpen">0</div>
+                        <div class="stat-label">Open</div>
                     </div>
                 </div>
             </div>
@@ -134,41 +134,10 @@
                 <div class="section-card">
                     <div class="section-header">
                         <h3>Recent Reports</h3>
-                        <span class="see-all">See all →</span>
+                        <button onclick="fetchIssues()" style="background:none;border:1.5px solid var(--border);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:Poppins,sans-serif;" title="Refresh issues from server">🔄 Refresh</button>
                     </div>
                     <div class="issue-list" id="issueList">
-
-                        <div class="issue-item">
-                            <div class="issue-type-icon" style="background:#fef3e2;">🕳️</div>
-                            <div class="issue-info">
-                                <div class="issue-title">Pothole on MG Road near bus stop</div>
-                                <div class="issue-meta">Ward 42 · Reported 2 days ago</div>
-                            </div>
-                            <span class="issue-status status-progress">In Progress</span>
-                        </div>
-
-                        <div class="issue-item">
-                            <div class="issue-type-icon" style="background:#e6f4ea;">💡</div>
-                            <div class="issue-info">
-                                <div class="issue-title">Broken streetlight – Nehru Nagar junction</div>
-                                <div class="issue-meta">Ward 42 · Reported 5 days ago</div>
-                            </div>
-                            <span class="issue-status status-resolved">Resolved</span>
-                        </div>
-
-                        <div class="issue-item">
-                            <div class="issue-type-icon" style="background:#fce8e6;">🗑️</div>
-                            <div class="issue-info">
-                                <div class="issue-title">Garbage not collected – Sector 7B</div>
-                                <div class="issue-meta">Ward 42 · Reported today</div>
-                            </div>
-                            <span class="issue-status status-open">Open</span>
-                        </div>
-
-                        <div class="issue-item" id="noIssues" style="display:none; justify-content:center; color:#aaa; font-size:13px; padding:24px;">
-                            No reports yet. Use "Report Issue" to get started!
-                        </div>
-
+                        <div class="issue-item" style="justify-content:center;color:#aaa;font-size:13px;padding:24px;">⏳ Loading your reports…</div>
                     </div>
                 </div>
 
@@ -223,29 +192,10 @@
                     <div class="section-card">
                         <div class="section-header">
                             <h3>Activity Feed</h3>
+                            <a href="civictrack-notifications.php" class="see-all">See all →</a>
                         </div>
                         <div class="activity-list" id="activityFeed">
-                            <div class="activity-item">
-                                <div class="activity-dot dot-green"></div>
-                                <div>
-                                    <div class="activity-text">Your streetlight report was <strong>resolved</strong></div>
-                                    <div class="activity-time">5 days ago</div>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-dot dot-blue"></div>
-                                <div>
-                                    <div class="activity-text">Pothole report assigned to <strong>Ward Engineer</strong></div>
-                                    <div class="activity-time">2 days ago</div>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-dot dot-orange"></div>
-                                <div>
-                                    <div class="activity-text">New report submitted – Garbage issue</div>
-                                    <div class="activity-time">Just now</div>
-                                </div>
-                            </div>
+                            <div style="text-align:center;color:#aaa;font-size:13px;padding:20px;">Loading…</div>
                         </div>
                     </div>
 
@@ -321,6 +271,7 @@
         const userWard = sessionStorage.getItem('ct_ward')  || 'Ward 42, Mumbai';
         const userCity = sessionStorage.getItem('ct_city')  || 'Mumbai';
         const userPhone= sessionStorage.getItem('ct_phone') || '';
+        const currentUserId = parseInt(sessionStorage.getItem('ct_user_id') || '0');
 
         document.getElementById('welcomeMsg').textContent  = `Welcome, ${userName}!`;
         document.getElementById('welcomeSub').textContent  = `Here's what's happening in ${userWard} today.`;
@@ -330,8 +281,13 @@
 
         let reportCount = 0;
 
-        // Fetch issues on load
-        document.addEventListener('DOMContentLoaded', fetchIssues);
+        // Fetch issues and notifications on load + auto-refresh every 30s
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchIssues();
+            fetchActivityFeed();
+            // Auto-refresh every 30 seconds so admin changes appear without reloading
+            setInterval(() => { fetchIssues(); fetchActivityFeed(); }, 30000);
+        });
 
         function setActive(el) {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -402,17 +358,26 @@
                         list.innerHTML = ''; // clear existing
                         reportCount = data.issues.length;
                         
-                        document.getElementById('statTotal').textContent = reportCount;
-                        document.getElementById('myReportsBadge').textContent = reportCount;
+                        let resolvedCount = 0;
+                        let progressCount = 0;
+                        let openCount = 0;
 
                         if (reportCount === 0) {
                             list.innerHTML = '<div class="issue-item" style="justify-content:center; color:#aaa; font-size:13px; padding:24px;">No reports yet. Use "Report Issue" to get started!</div>';
-                            return;
+                        } else {
+                            data.issues.forEach(issue => {
+                                if (issue.status === 'Resolved') resolvedCount++;
+                                else if (issue.status === 'In Progress') progressCount++;
+                                else openCount++;
+                                renderIssue(issue, list);
+                            });
                         }
 
-                        data.issues.forEach(issue => {
-                            renderIssue(issue, list);
-                        });
+                        document.getElementById('statTotal').textContent = reportCount;
+                        document.getElementById('statResolved').textContent = resolvedCount;
+                        document.getElementById('statInProgress').textContent = progressCount;
+                        document.getElementById('statOpen').textContent = openCount;
+                        document.getElementById('myReportsBadge').textContent = reportCount;
                     }
                 })
                 .catch(error => console.error('Error fetching issues:', error));
@@ -422,23 +387,43 @@
             const icons = { '🕳️ Pothole':'🕳️', '💡 Street Light':'💡', '🗑️ Garbage':'🗑️', '💧 Water Supply':'💧', '🌳 Tree / Fallen Branch':'🌳', '🚧 Road Damage':'🚧', 'Other':'📌' };
             const iconColors = { '🕳️ Pothole':'#fef3e2', '💡 Street Light':'#e8f0fe', '🗑️ Garbage':'#fce8e6', '💧 Water Supply':'#e8f8ff', '🌳 Tree / Fallen Branch':'#e6f4ea', '🚧 Road Damage':'#fff3e0', 'Other':'#f3e8ff' };
             
-            // Extract text without emoji for matching if necessary, but here we assume DB stores the emoji
             let typeKey = issue.issue_type;
-            
             const icon  = icons[typeKey]  || '📌';
             const color = iconColors[typeKey] || '#f0f0f0';
 
             const statusClass = issue.status === 'Resolved' ? 'status-resolved' : (issue.status === 'In Progress' ? 'status-progress' : 'status-open');
+            let statusLabel = issue.status;
+
+            // Approval action bar — only for this user's own resolved issues
+            let actionsHtml = '';
+            const isOwner = currentUserId > 0 && parseInt(issue.user_id) === currentUserId;
+            if (isOwner && issue.status === 'Resolved' && parseInt(issue.is_citizen_approved) === 0) {
+                if (parseInt(issue.can_reopen) === 1) {
+                    actionsHtml = `
+                        <div style="margin-top:12px;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <div style="flex:1;font-size:13px;color:#7a5c00;"><strong>Work done?</strong> You have 24 hrs to verify.</div>
+                            <button onclick="approveIssue(${issue.id})" style="background:#198754;color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;">✅ Approve</button>
+                            <button onclick="reopenIssue(${issue.id})" style="background:#dc3545;color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;">❌ Not Done</button>
+                        </div>`;
+                }
+            } else if (isOwner && issue.status === 'Resolved' && parseInt(issue.is_citizen_approved) === 1) {
+                statusLabel = 'Approved & Closed';
+            }
 
             const item = document.createElement('div');
             item.className = 'issue-item';
+            item.style.flexDirection = 'column';
+            item.style.alignItems = 'stretch';
             item.innerHTML = `
-                <div class="issue-type-icon" style="background:${color};">${icon}</div>
-                <div class="issue-info">
-                    <div class="issue-title">${issue.issue_type} – ${issue.location_text}</div>
-                    <div class="issue-meta">${issue.ward} · Reported by ${issue.reported_by}</div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div class="issue-type-icon" style="background:${color};">${icon}</div>
+                    <div class="issue-info">
+                        <div class="issue-title">${issue.issue_type} – ${issue.location_text}</div>
+                        <div class="issue-meta">${issue.ward || '—'} · Reported by ${issue.reported_by}</div>
+                    </div>
+                    <span class="issue-status ${statusClass}">${statusLabel}</span>
                 </div>
-                <span class="issue-status ${statusClass}">${issue.status}</span>`;
+                ${actionsHtml}`;
 
             container.appendChild(item);
         }
@@ -500,6 +485,77 @@
             document.getElementById('modalLocation').value   = '';
             document.getElementById('modalWard').value       = '';
             document.getElementById('modalDesc').value       = '';
+        }
+
+        function showToast(msg, color) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            if (color) t.style.background = color;
+            t.classList.add('show');
+            setTimeout(() => { t.classList.remove('show'); t.style.background = ''; }, 3200);
+        }
+
+        function approveIssue(id) {
+            if (!confirm('Confirm the work has been completed. This will close the ticket.')) return;
+            const fd = new FormData();
+            fd.append('action', 'approveIssue');
+            fd.append('issue_id', id);
+            fetch('../api/issues.php', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) { showToast('✅ Issue approved and closed!', '#198754'); fetchIssues(); fetchActivityFeed(); }
+                    else alert(data.message || 'Action failed');
+                });
+        }
+
+        function reopenIssue(id) {
+            if (!confirm('Mark as not done? The issue will be re-raised with Urgent priority and the admin will be notified.')) return;
+            const fd = new FormData();
+            fd.append('action', 'reopenIssue');
+            fd.append('issue_id', id);
+            fetch('../api/issues.php', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) { showToast('🔴 Issue re-raised as Urgent!', '#dc3545'); fetchIssues(); fetchActivityFeed(); }
+                    else alert(data.message || 'Action failed');
+                });
+        }
+
+        function fetchActivityFeed() {
+            fetch('../api/issues.php?action=fetchNotifications')
+                .then(r => r.json())
+                .then(data => {
+                    const feed = document.getElementById('activityFeed');
+                    if (!data.success || data.notifications.length === 0) {
+                        feed.innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px;">No activity yet.</div>';
+                        return;
+                    }
+                    // Update notification badge
+                    const unread = data.unread_count || 0;
+                    const badge = document.getElementById('notifBadge');
+                    if (badge) badge.textContent = unread;
+
+                    const dotClass = n => n.title.includes('Resolved') || n.title.includes('approved') ? 'dot-green'
+                                       : n.title.includes('Urgent') || n.title.includes('reopen') ? 'dot-red' : 'dot-blue';
+
+                    feed.innerHTML = data.notifications.slice(0, 6).map(n => {
+                        const diff = (Date.now() - new Date(n.created_at).getTime()) / 1000;
+                        const ago  = diff < 60 ? 'Just now' : diff < 3600 ? `${Math.floor(diff/60)}m ago`
+                                   : diff < 86400 ? `${Math.floor(diff/3600)}h ago` : `${Math.floor(diff/86400)}d ago`;
+                        return `
+                        <div class="activity-item">
+                            <div class="activity-dot ${dotClass(n)}"></div>
+                            <div>
+                                <div class="activity-text"><strong>${n.title}:</strong> ${n.message}</div>
+                                <div class="activity-time">${ago}</div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                })
+                .catch(() => {
+                    document.getElementById('activityFeed').innerHTML =
+                        '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px;">Log in to see activity.</div>';
+                });
         }
     </script>
 </body>

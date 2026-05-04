@@ -1,156 +1,154 @@
-const ISSUES = [
-    { id:'#CT001', type:'Pothole',      emoji:'🕳️', reporter:'Ramesh Kumar',  phone:'+91 98200 11111', location:'MG Road, near bus stop',       ward:'Ward 42', priority:'High',   status:'pending',  date:'27 Apr 2026', icon_bg:'#fef3e2', lat:19.05950, lng:72.83540 },
-    { id:'#CT002', type:'Street Light', emoji:'💡', reporter:'Anjali Singh',  phone:'+91 98200 22222', location:'Nehru Nagar junction',          ward:'Ward 42', priority:'Normal', status:'resolved', date:'22 Apr 2026', icon_bg:'#e6f4ea', lat:19.07280, lng:72.88260 },
-    { id:'#CT003', type:'Garbage',      emoji:'🗑️', reporter:'Priya Menon',   phone:'+91 98200 33333', location:'Sector 7B, near temple',        ward:'Ward 43', priority:'Urgent', status:'pending',  date:'27 Apr 2026', icon_bg:'#fce8e6', lat:19.05540, lng:72.84420 },
-    { id:'#CT004', type:'Water Supply', emoji:'💧', reporter:'Suresh Nair',   phone:'+91 98200 44444', location:'Lal Bahadur colony, tap 4',     ward:'Ward 41', priority:'Urgent', status:'progress', date:'25 Apr 2026', icon_bg:'#e8f0fe', lat:19.04300, lng:72.85530 },
-    { id:'#CT005', type:'Road Damage',  emoji:'🚧', reporter:'Deepa Rao',     phone:'+91 98200 55555', location:'Link Road, flyover approach',   ward:'Ward 44', priority:'High',   status:'progress', date:'24 Apr 2026', icon_bg:'#fff3e0', lat:19.09180, lng:72.82980 },
-    { id:'#CT006', type:'Tree',         emoji:'🌳', reporter:'Kiran Patil',   phone:'+91 98200 66666', location:'Shivaji Park, gate 2',          ward:'Ward 42', priority:'Normal', status:'resolved', date:'20 Apr 2026', icon_bg:'#e6f4ea', lat:19.02900, lng:72.83810 },
-    { id:'#CT007', type:'Pothole',      emoji:'🕳️', reporter:'Mohan Das',     phone:'+91 98200 77777', location:'Station Road, opp. cinema',    ward:'Ward 43', priority:'High',   status:'pending',  date:'26 Apr 2026', icon_bg:'#fef3e2', lat:19.06800, lng:72.85760 },
-    { id:'#CT008', type:'Garbage',      emoji:'🗑️', reporter:'Sunita Verma',  phone:'+91 98200 88888', location:'Market Lane, Dumpyard area',   ward:'Ward 42', priority:'Normal', status:'rejected', date:'21 Apr 2026', icon_bg:'#fce8e6', lat:19.05160, lng:72.83500 },
-    { id:'#CT009', type:'Street Light', emoji:'💡', reporter:'Anil Sharma',   phone:'+91 98200 99999', location:'Garden Circle, lamp post 14',  ward:'Ward 41', priority:'Normal', status:'pending',  date:'27 Apr 2026', icon_bg:'#e6f4ea', lat:19.06500, lng:72.87000 },
-    { id:'#CT010', type:'Water Supply', emoji:'💧', reporter:'Rekha Joshi',   phone:'+91 98200 10101', location:'Patel Colony, main pipeline',  ward:'Ward 45', priority:'Urgent', status:'progress', date:'23 Apr 2026', icon_bg:'#e8f0fe', lat:19.08200, lng:72.84800 },
-];
-
-const USERS = [
-    { name:'Ramesh Kumar',  initials:'RK', color:'ub-blue',   phone:'+91 98200 11111', ward:'Ward 42', reports:8,  points:4520, role:'User',  joined:'Jan 2025' },
-    { name:'Anjali Singh',  initials:'AS', color:'ub-green',  phone:'+91 98200 22222', ward:'Ward 42', reports:6,  points:3890, role:'User',  joined:'Feb 2025' },
-    { name:'Priya Menon',   initials:'PM', color:'ub-orange', phone:'+91 98200 33333', ward:'Ward 43', reports:5,  points:3210, role:'User',  joined:'Mar 2025' },
-    { name:'Super Admin',   initials:'SA', color:'ub-purple', phone:'+91 98765 00000', ward:'-',       reports:0,  points:0,    role:'Admin', joined:'Jan 2025' },
-    { name:'Suresh Nair',   initials:'SN', color:'ub-blue',   phone:'+91 98200 44444', ward:'Ward 41', reports:4,  points:2800, role:'User',  joined:'Apr 2025' },
-    { name:'Deepa Rao',     initials:'DR', color:'ub-orange', phone:'+91 98200 55555', ward:'Ward 44', reports:3,  points:1500, role:'User',  joined:'Mar 2025' },
-];
-
-const ENGINEERS = [
-    { name:'Ravi Kumar',  id:'ENG-001', ward:'Ward 42', active:4, resolved:28, status:'Active' },
-    { name:'Priya Iyer',  id:'ENG-002', ward:'Ward 42', active:2, resolved:45, status:'Active' },
-    { name:'Deepak Nair', id:'ENG-003', ward:'Ward 41', active:6, resolved:19, status:'Active' },
-    { name:'Anjali Verma',id:'ENG-004', ward:'Ward 43', active:0, resolved:32, status:'Off-duty' },
-    { name:'Suresh Menon',id:'ENG-005', ward:'Ward 42', active:3, resolved:14, status:'Active' },
-];
-
-const WARDS = [
-    { ward:'Ward 41', zone:'North', open:12, progress:8,  resolved:44, engineer:'Deepak Nair',  health:72 },
-    { ward:'Ward 42', zone:'Central',open:9, progress:16, resolved:78, engineer:'Ravi Kumar',   health:87 },
-    { ward:'Ward 43', zone:'East',  open:21, progress:5,  resolved:31, engineer:'Anjali Verma', health:54 },
-    { ward:'Ward 44', zone:'West',  open:6,  progress:9,  resolved:60, engineer:'—',            health:79 },
-    { ward:'Ward 45', zone:'South', open:14, progress:3,  resolved:22, engineer:'—',            health:45 },
-];
-
-const ALERTS = [
-    { type:'error',   icon:'🚨', text:'7 issues are overdue by more than 72 hours. SLA breach detected.',   time:'5 mins ago', read:false },
-    { type:'warning', icon:'⚠️', text:'Ward 43 has 21 open issues – highest in the city this week.',         time:'1 hour ago',  read:false },
-    { type:'info',    icon:'ℹ️', text:'Engineer Anjali Verma is off-duty. Reassign her active jobs.',        time:'3 hours ago', read:false },
-    { type:'success', icon:'✅', text:'Issue #CT002 (Streetlight) resolved by Ravi Kumar.',                  time:'5 hours ago', read:true  },
-    { type:'success', icon:'✅', text:'40 new residents registered this month.',                             time:'1 day ago',   read:true  },
-];
-
-const ACTIVITY = [
-    { color:'td-red',    text:'Issue <strong>#CT003</strong> (Garbage – Sector 7B) marked <strong>Urgent</strong>.', time:'Just now'   },
-    { color:'td-green',  text:'Issue <strong>#CT002</strong> resolved by Ravi Kumar.',                              time:'2 hrs ago'  },
-    { color:'td-blue',   text:'Issue <strong>#CT004</strong> assigned to Deepak Nair.',                             time:'3 hrs ago'  },
-    { color:'td-orange', text:'New report: <strong>Road Damage</strong> at Link Road.',                             time:'5 hrs ago'  },
-    { color:'td-green',  text:'Ward 42 satisfaction score updated to <strong>4.2 ⭐</strong>.',                     time:'8 hrs ago'  },
-    { color:'td-blue',   text:'40 new residents registered this month.',                                            time:'1 day ago'  },
-];
-
 let activeIssueId = null;
 let engineerList  = [];
 let issueList     = [];
 let userList      = [];
 let filteredIssues = [];
 
+const WARDS = [];
+const ALERTS = [];
+const ACTIVITY = [];
+
+// Admin user ID from sessionStorage — sent with every admin API request for auth
+function adminUid() { return sessionStorage.getItem('ct_user_id') || 0; }
+function adminApi(action) { return `../api/admin.php?action=${action}&uid=${adminUid()}`; }
+function adminPost(fd) { fd.append('uid', adminUid()); return fd; }
+
 document.addEventListener('DOMContentLoaded', () => {
     setTimestamp();
-    fetchIssues(); // Will trigger table render and charts
-    fetchUsers();
-    fetchEngineers();
-    renderWards();
-    renderAlerts();
+
+    // Verify admin auth before doing anything
+    const uid = adminUid();
+    if (!uid || uid === '0' || uid === 0) {
+        showAuthBanner('No admin session found.');
+        return;
+    }
+
+    // Quick ping to verify the uid is actually an admin in DB
+    fetch(adminApi('fetchStats'))
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success && data.message && data.message.includes('Unauthorized')) {
+                showAuthBanner('Your session is not an admin account.');
+            } else {
+                fetchAdminData();
+            }
+        })
+        .catch(() => fetchAdminData());
 });
 
-function fetchIssues() {
-    fetch('../api/issues.php?action=fetchIssues')
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            issueList = data.issues.map(i => {
-                let statusMap = { 'Open': 'pending', 'In Progress': 'progress', 'Resolved': 'resolved' };
-                let emojiMap = { 'Pothole': '🕳️', 'Street Light': '💡', 'Garbage': '🗑️', 'Water Supply': '💧', 'Road Damage': '🚧', 'Tree': '🌳' };
-                let bgMap = { 'Pothole': '#fef3e2', 'Street Light': '#e6f4ea', 'Garbage': '#fce8e6', 'Water Supply': '#e8f0fe', 'Road Damage': '#fff3e0', 'Tree': '#e6f4ea' };
-                
-                let fallbackLat = 19.05950 + (Math.random() * 0.05 - 0.025);
-                let fallbackLng = 72.83540 + (Math.random() * 0.05 - 0.025);
-                
-                return {
-                    id: '#CT' + i.id.toString().padStart(3, '0'),
-                    raw_id: i.id,
-                    type: i.issue_type,
-                    emoji: emojiMap[i.issue_type] || '📌',
-                    reporter: i.reported_by || 'Citizen',
-                    phone: '', 
-                    location: i.location_text,
-                    ward: i.ward || 'Unknown',
-                    priority: i.priority,
-                    status: statusMap[i.status] || 'pending',
-                    date: new Date(i.created_at).toLocaleDateString(),
-                    icon_bg: bgMap[i.issue_type] || '#f3f4f6',
-                    lat: i.latitude || fallbackLat,
-                    lng: i.longitude || fallbackLng
-                };
-            });
-            filteredIssues = [...issueList];
-            
-            renderActivityFeed();
-            renderIssueTable();
-            buildCharts();
-            updateCounters();
-            
-            if (mapInitialized) {
-                filterMapMarkers();
-            }
-        }
-    }).catch(e => console.error(e));
+function showAuthBanner(reason) {
+    document.body.insertAdjacentHTML('afterbegin', `
+        <div id="authBanner" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;padding:16px 24px;display:flex;align-items:center;gap:16px;font-family:Poppins,sans-serif;font-size:14px;">
+            <span style="font-size:20px;">⚠️</span>
+            <div style="flex:1;"><strong>Admin authentication required.</strong> ${reason} All actions will fail until you log in properly.</div>
+            <a href="admin_login.php" style="background:#fff;color:#C0392B;padding:8px 18px;border-radius:6px;font-weight:700;text-decoration:none;white-space:nowrap;">🔐 Login as Admin →</a>
+            <button onclick="document.getElementById('authBanner').remove();fetchAdminData();" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;">Try Anyway</button>
+        </div>
+    `);
+    fetchAdminData(); // Still load data (may work via PHP session)
 }
 
-function fetchUsers() {
-    fetch('../api/admin.php?action=fetchUsers')
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            userList = data.users.map(u => ({
+async function fetchAdminData() {
+    try {
+        // 1. Fetch Stats
+        const statsRes = await fetch(adminApi('fetchStats'));
+        const statsData = await statsRes.json();
+        if (statsData.success) {
+            updateDashboardCounters(statsData.stats);
+        }
+
+        // 2. Fetch Issues
+        const issuesRes = await fetch('../api/issues.php?action=fetchIssues');
+        const issuesData = await issuesRes.json();
+        if (issuesData.success) {
+            issueList = issuesData.issues.map(i => ({
+                id: '#' + i.id.toString().padStart(3, '0'),
+                realId: i.id,
+                type: i.issue_type,
+                emoji: getEmoji(i.issue_type),
+                reporter: i.reported_by || 'Unknown',
+                location: i.location_text,
+                ward: i.ward || '—',
+                priority: i.priority,
+                status: i.status === 'Open' ? 'pending' : i.status === 'In Progress' ? 'progress' : 'resolved',
+                date: new Date(i.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }),
+                icon_bg: '#fef3e2',
+                lat: parseFloat(i.latitude),
+                lng: parseFloat(i.longitude)
+            }));
+            renderIssueTable();
+            renderActivityFeed();
+        }
+
+        // 3. Fetch Users
+        const usersRes = await fetch(adminApi('fetchUsers'));
+        const usersData = await usersRes.json();
+        if (usersData.success) {
+            userList = usersData.users.map(u => ({
                 name: u.full_name,
-                initials: u.full_name.split(' ').map(w=>w[0]).join('').slice(0,2),
-                color: u.role === 'admin' ? 'ub-purple' : 'ub-blue',
+                initials: u.full_name.split(' ').map(w => w[0]).join('').slice(0, 2),
+                color: 'ub-blue',
                 phone: u.phone,
-                ward: u.ward || '-',
-                reports: parseInt(u.reports_count) || 0,
-                points: (parseInt(u.reports_count) || 0) * 10,
-                role: u.role === 'admin' ? 'Admin' : 'User',
-                joined: new Date(u.created_at).toLocaleDateString()
+                ward: u.ward_locality || '-',
+                reports: 0, // Placeholder or fetch separately
+                points: 0,
+                role: u.role.charAt(0).toUpperCase() + u.role.slice(1),
+                joined: new Date(u.created_at).toLocaleDateString('en-IN', { month:'short', year:'numeric' })
             }));
             renderUsers();
         }
-    }).catch(e => console.error(e));
-}
 
-function fetchEngineers() {
-    fetch('../api/admin.php?action=fetchEngineers')
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            engineerList = data.engineers.map(e => ({
+        // 4. Fetch Engineers
+        const engRes = await fetch(adminApi('fetchEngineers'));
+        const engData = await engRes.json();
+        if (engData.success) {
+            engineerList = engData.engineers.map(e => ({
                 name: e.full_name,
                 id: e.employee_id,
+                dbId: e.id,
                 ward: e.assigned_ward,
-                active: parseInt(e.active_jobs) || 0,
-                resolved: parseInt(e.resolved_jobs) || 0,
-                status: 'Active',
-                rawPhone: e.phone
+                active: parseInt(e.active_issues) || 0,
+                resolved: parseInt(e.resolved_issues) || 0,
+                status: e.status.charAt(0).toUpperCase() + e.status.slice(1)
             }));
             renderEngineers();
         }
-    }).catch(e => console.error(e));
+
+        // 5. Fetch Activity Log
+        const actRes = await fetch(adminApi('fetchActivityLog'));
+        const actData = await actRes.json();
+        if (actData.success) {
+            actData.logs.forEach(log => {
+                ACTIVITY.push({
+                    color: log.action_description.includes('Resolved') ? 'td-green' :
+                           log.action_description.includes('Urgent')  ? 'td-red'   : 'td-blue',
+                    text: `<strong>#${log.issue_id}</strong> ${log.issue_type} — ${log.action_description}`,
+                    time: new Date(log.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+                });
+            });
+            renderActivityFeed();
+        }
+
+        buildCharts();
+    } catch (error) {
+        console.error('Error fetching admin data:', error);
+    }
 }
+
+function getEmoji(type) {
+    const map = { 'Pothole':'🕳️', 'Street Light':'💡', 'Garbage':'🗑️', 'Water Supply':'💧', 'Road Damage':'🚧', 'Tree':'🌳' };
+    return map[type] || '⚠️';
+}
+
+function updateDashboardCounters(stats) {
+    document.getElementById('s-total').textContent = stats.total_issues;
+    document.getElementById('s-pending').textContent = stats.pending;
+    document.getElementById('s-resolved').textContent = stats.resolved;
+    document.getElementById('s-users').textContent = stats.total_users;
+    document.getElementById('pendingBadge').textContent = stats.pending;
+    document.getElementById('reqCount').textContent = stats.pending;
+}
+
 
 function setTimestamp() {
     document.getElementById('lastUpdated').textContent =
@@ -282,27 +280,24 @@ function priorityBadge(p) {
 function quickStatus(id, newStatus) {
     const issue = issueList.find(i => i.id === id);
     if (!issue) return;
-    
-    const formData = new FormData();
-    formData.append('action', 'updateIssueStatus');
-    formData.append('issue_id', issue.raw_id);
-    formData.append('status', newStatus);
-    
-    fetch('../api/admin.php', { method: 'POST', body: formData })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            issue.status = newStatus;
-            renderIssueTable();
-            updateCounters();
-            toast(`✅ Issue ${id} → ${newStatus}`);
-            ACTIVITY.unshift({ color: newStatus==='resolved'?'td-green':'td-blue', text:`Issue <strong>${id}</strong> marked <strong>${newStatus}</strong>.`, time:'Just now' });
-            renderActivityFeed();
-            if (mapInitialized) filterMapMarkers();
-        } else {
-            toast('⚠️ Error: ' + data.message);
-        }
-    });
+    const fd = new FormData();
+    fd.append('action', 'updateIssue');
+    fd.append('issue_id', issue.realId);
+    fd.append('status', newStatus);
+    fetch('../api/admin.php?uid=' + adminUid(), { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                issue.status = newStatus;
+                renderIssueTable();
+                updateCounters();
+                ACTIVITY.unshift({ color: newStatus==='resolved'?'td-green':'td-blue', text:`Issue <strong>${id}</strong> marked <strong>${newStatus}</strong>.`, time:'Just now' });
+                renderActivityFeed();
+                toast(`✅ Issue ${id} → ${newStatus}`);
+            } else {
+                toast('❌ ' + (data.message || 'Update failed'));
+            }
+        });
 }
 
 function viewIssue(id) {
@@ -444,51 +439,52 @@ function openAssignModal(id) {
         document.getElementById('modalTitle').textContent = 'Add Issue Manually';
     }
     document.getElementById('m-note').value = '';
+
+    // Populate engineers dropdown using DB integer id as value
+    const engSelect = document.getElementById('m-engineer');
+    engSelect.innerHTML = '<option value="">— Select engineer —</option>' +
+        engineerList.map(e => `<option value="${e.dbId}">${e.name} (${e.ward})</option>`).join('');
+
     document.getElementById('assignModal').classList.add('open');
 }
+
 
 function closeModal() {
     document.getElementById('assignModal').classList.remove('open');
 }
 
 function saveAssignment() {
-    const eng    = document.getElementById('m-engineer').value;
+    const engVal = document.getElementById('m-engineer').value;
     const status = document.getElementById('m-status').value;
     const note   = document.getElementById('m-note').value.trim();
 
     if (activeIssueId) {
         const issue = issueList.find(i => i.id === activeIssueId);
         if (issue) {
-            const formData = new FormData();
-            formData.append('action', 'updateIssueStatus');
-            formData.append('issue_id', issue.raw_id);
-            formData.append('status', status);
-            formData.append('engineer', eng);
-            formData.append('note', note);
-            
-            fetch('../api/admin.php', { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    issue.status = status;
-                    renderIssueTable();
-                    updateCounters();
-                    ACTIVITY.unshift({ color:'td-blue', text:`Issue <strong>${activeIssueId}</strong> ${eng ? `assigned to <strong>${eng.split(' ')[0]}</strong>` : 'updated'} → <strong>${status}</strong>.${note?' Note added.':''}`, time:'Just now' });
-                    renderActivityFeed();
-                    if (mapInitialized) filterMapMarkers();
-                    
-                    closeModal();
-                    toast(eng
-                        ? `✅ Assigned to ${eng.split(' (')[0]} · Status: ${status}`
-                        : `✅ Status updated to ${status}`);
-                } else {
-                    toast('⚠️ Error: ' + data.message);
-                }
-            });
+            const fd = new FormData();
+            fd.append('action',   'updateIssue');
+            fd.append('issue_id', issue.realId);
+            fd.append('status',   status);
+            if (engVal) fd.append('engineer_id', engVal);
+            if (note)   fd.append('note', note);
+            fetch('../api/admin.php?uid=' + adminUid(), { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        issue.status = status;
+                        renderIssueTable();
+                        updateCounters();
+                        const engName = engVal ? engineerList.find(e => String(e.dbId) === String(engVal))?.name || 'Engineer' : null;
+                        ACTIVITY.unshift({ color:'td-blue', text:`Issue <strong>${activeIssueId}</strong> ${engName ? `assigned to <strong>${engName}</strong>` : 'updated'} → <strong>${status}</strong>.${note?' Note added.':''}`, time:'Just now' });
+                        renderActivityFeed();
+                        toast(engName ? `✅ Assigned to ${engName} · ${status}` : `✅ Status: ${status}`);
+                    } else {
+                        toast('❌ ' + (data.message || 'Update failed'));
+                    }
+                });
         }
-    } else {
-        closeModal();
     }
+    closeModal();
 }
 
 function openAddEngModal() {
@@ -497,35 +493,36 @@ function openAddEngModal() {
 function closeEngModal() {
     document.getElementById('engModal').classList.remove('open');
 }
-function addEngineer() {
+async function addEngineer() {
     const name  = document.getElementById('eng-name').value.trim();
     const id    = document.getElementById('eng-id').value.trim();
     const ward  = document.getElementById('eng-ward').value;
     const phone = document.getElementById('eng-phone').value.trim();
-    if (!name || !id || !phone) { toast('⚠️ Name, ID, and Phone are required'); return; }
+    if (!name || !id) { toast('⚠️ Name and ID are required'); return; }
     
     const formData = new FormData();
     formData.append('action', 'addEngineer');
-    formData.append('name', name);
-    formData.append('emp_id', id);
-    formData.append('ward', ward);
+    formData.append('full_name', name);
     formData.append('phone', phone);
+    formData.append('employee_id', id);
+    formData.append('specialty', 'General'); // Placeholder
+    formData.append('ward', ward);
+
+    const res = await fetch('../api/admin.php?uid=' + adminUid(), { method:'POST', body:formData });
+    const data = await res.json();
     
-    fetch('../api/admin.php', { method: 'POST', body: formData })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            toast(`✅ Engineer ${name} added`);
-            document.getElementById('eng-name').value = '';
-            document.getElementById('eng-id').value   = '';
-            document.getElementById('eng-phone').value = '';
-            closeEngModal();
-            fetchEngineers();
-        } else {
-            toast('⚠️ Error: ' + data.message);
-        }
-    }).catch(e => toast('⚠️ Network error'));
+    if (data.success) {
+        fetchAdminData();
+        closeEngModal();
+        toast(`✅ Engineer ${name} added`);
+        document.getElementById('eng-name').value = '';
+        document.getElementById('eng-id').value   = '';
+        document.getElementById('eng-phone').value = '';
+    } else {
+        toast('❌ ' + data.message);
+    }
 }
+
 
 function globalSearchFn(q) {
     renderIssueTable();
@@ -579,27 +576,12 @@ function buildCharts() {
         options:{ plugins:{ legend:{ display:false } }, responsive:true, scales:{ y:{ beginAtZero:true, grid:{ color:'#f0f0f0' } } } }
     });
 
-    const typeCounts = {
-        'Pothole': 0, 'Street Light': 0, 'Garbage': 0, 'Water Supply': 0, 'Road Damage': 0, 'Tree': 0, 'Other': 0
-    };
-    
-    issueList.forEach(i => {
-        if (typeCounts[i.type] !== undefined) {
-            typeCounts[i.type]++;
-        } else {
-            typeCounts['Other']++;
-        }
-    });
-
     new Chart(document.getElementById('chartCategory'), {
         type:'doughnut',
         data:{
             labels:['Pothole','Street Light','Garbage','Water','Road Damage','Tree','Other'],
             datasets:[{
-                data:[
-                    typeCounts['Pothole'], typeCounts['Street Light'], typeCounts['Garbage'], 
-                    typeCounts['Water Supply'], typeCounts['Road Damage'], typeCounts['Tree'], typeCounts['Other']
-                ],
+                data:[35,20,18,12,8,5,2],
                 backgroundColor:['#F4900C','#1a73e8','#C0392B','#2D6A4F','#7c3aed','#0e7490','#6b7280'],
                 borderWidth:2,
             }]

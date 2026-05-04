@@ -1,9 +1,7 @@
 <?php
-// api/auth.php
+session_start();
 header('Content-Type: application/json');
 require_once 'db_connect.php';
-
-session_start();
 
 $action = $_POST['action'] ?? '';
 
@@ -26,7 +24,7 @@ if ($action === 'checkUser') {
         $_SESSION['full_name'] = $user['full_name'];
         $_SESSION['role'] = $user['role'];
         
-        echo json_encode(['success' => true, 'isNewUser' => false, 'user' => $user]);
+        echo json_encode(['success' => true, 'isNewUser' => false, 'user' => $user, 'user_id' => $user['id']]);
     } else {
         // User does not exist
         echo json_encode(['success' => true, 'isNewUser' => true]);
@@ -55,7 +53,7 @@ elseif ($action === 'registerUser') {
         $_SESSION['full_name'] = $fullName;
         $_SESSION['role'] = 'resident';
 
-        echo json_encode(['success' => true, 'message' => 'User registered successfully']);
+        echo json_encode(['success' => true, 'message' => 'User registered successfully', 'user_id' => $userId]);
     } catch (PDOException $e) {
         // Check for duplicate entry (phone)
         if ($e->errorInfo[1] == 1062) {
@@ -65,6 +63,32 @@ elseif ($action === 'registerUser') {
         }
     }
 } 
+elseif ($action === 'setSession') {
+    // Called after OTP verification to sync JS sessionStorage → PHP $_SESSION
+    $userId = intval($_POST['user_id'] ?? 0);
+    $role   = $_POST['role'] ?? 'resident';
+
+    if ($userId <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid user_id']);
+        exit;
+    }
+
+    // Verify the user actually exists and the role matches (security check)
+    $stmt = $pdo->prepare("SELECT id, full_name, role FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        echo json_encode(['success' => false, 'message' => 'User not found']);
+        exit;
+    }
+
+    $_SESSION['user_id']   = $user['id'];
+    $_SESSION['full_name'] = $user['full_name'];
+    $_SESSION['role']      = $user['role'];
+
+    echo json_encode(['success' => true, 'role' => $user['role']]);
+}
 else {
     echo json_encode(['success' => false, 'message' => 'Invalid action']);
 }

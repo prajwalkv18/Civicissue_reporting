@@ -1,120 +1,162 @@
 <?php
-// api/admin.php
 header('Content-Type: application/json');
 require_once 'db_connect.php';
-
 session_start();
 
-$action = $_REQUEST['action'] ?? '';
+// Auth: accept EITHER PHP session role OR uid param (DB lookup)
+$isAdmin = false;
 
-// Normally, you would verify the admin session here.
-// For the demo, we assume the user has access.
-// if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-//     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-//     exit;
-// }
+// Method 1: PHP session (works when login flow sets it)
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+    $isAdmin = true;
+}
 
-if ($action === 'fetchUsers') {
+// Method 2: uid param — DB lookup (works when sessionStorage is used)
+if (!$isAdmin) {
+    $requestedBy = intval($_GET['uid'] ?? $_POST['uid'] ?? 0);
+    if ($requestedBy > 0) {
+        $chk = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+        $chk->execute([$requestedBy]);
+        $row = $chk->fetch();
+        $isAdmin = ($row && $row['role'] === 'admin');
+    }
+}
+
+if (!$isAdmin) {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access. Please log in via admin_login.php']);
+    exit;
+}
+
+$action = $_GET['action'] ?? $_POST['action'] ?? '';
+
+if ($action === 'fetchStats') {
     try {
-        // Fetch users and count their reports
+        $totalUsers    = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'resident'")->fetchColumn();
+        $totalEngineers= $pdo->query("SELECT COUNT(*) FROM engineers")->fetchColumn();
+        $totalIssues   = $pdo->query("SELECT COUNT(*) FROM issues")->fetchColumn();
+        $pendingIssues = $pdo->query("SELECT COUNT(*) FROM issues WHERE status = 'Open'")->fetchColumn();
+        $resolvedIssues= $pdo->query("SELECT COUNT(*) FROM issues WHERE status = 'Resolved'")->fetchColumn();
+        echo json_encode(['success' => true, 'stats' => [
+            'total_users'     => $totalUsers,
+            'total_engineers' => $totalEngineers,
+            'total_issues'    => $totalIssues,
+            'pending'         => $pendingIssues,
+            'resolved'        => $resolvedIssues
+        ]]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+}
+
+elseif ($action === 'fetchUsers') {
+    try {
         $stmt = $pdo->query("
-            SELECT u.id, u.full_name, u.phone, u.ward_locality as ward, u.role, u.created_at,
-                   COUNT(i.id) as reports_count
+            SELECT u.id, u.full_name, u.phone, u.ward_locality, u.role, u.created_at,
+                   COUNT(i.id) as report_count
             FROM users u
             LEFT JOIN issues i ON u.id = i.user_id
-            WHERE u.role IN ('resident', 'admin')
             GROUP BY u.id
             ORDER BY u.created_at DESC
         ");
-        $users = $stmt->fetchAll();
-        
-        echo json_encode(['success' => true, 'users' => $users]);
+        echo json_encode(['success' => true, 'users' => $stmt->fetchAll()]);
     } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
 }
+
 elseif ($action === 'fetchEngineers') {
     try {
-        // Fetch engineers and count their assigned active/resolved jobs
-        // Since we don't have a direct 'assigned_to' column in issues yet, 
-        // we'll just show the total issues in their assigned ward for demonstration.
         $stmt = $pdo->query("
-            SELECT u.id, u.full_name, u.phone, u.employee_id, u.ward_locality as assigned_ward,
-                   (SELECT COUNT(*) FROM issues WHERE ward = u.ward_locality AND status IN ('Open', 'In Progress')) as active_jobs,
-                   (SELECT COUNT(*) FROM issues WHERE ward = u.ward_locality AND status = 'Resolved') as resolved_jobs
-            FROM users u
-            WHERE u.role = 'engineer'
-            ORDER BY u.full_name ASC
+            SELECT e.*, u.full_name, u.phone,
+                (SELECT COUNT(*) FROM issues WHERE assigned_engineer_id = e.id AND status = 'In Progress') as active_issues,
+                (SELECT COUNT(*) FROM issues WHERE assigned_engineer_id = e.id AND status = 'Resolved')    as resolved_issues
+            FROM engineers e
+            JOIN users u ON e.user_id = u.id
         ");
-        $engineers = $stmt->fetchAll();
-        
-        echo json_encode(['success' => true, 'engineers' => $engineers]);
+        echo json_encode(['success' => true, 'engineers' => $stmt->fetchAll()]);
     } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
 }
+
 elseif ($action === 'addEngineer') {
-    $name = $_POST['name'] ?? '';
-    $empId = $_POST['emp_id'] ?? '';
-    $ward = $_POST['ward'] ?? '';
-    $phone = $_POST['phone'] ?? '';
-    
-    if (empty($name) || empty($empId) || empty($phone)) {
-        echo json_encode(['success' => false, 'message' => 'Name, Employee ID, and Phone are required.']);
-        exit;
-    }
-    
+    $fullName   = $_POST['full_name']   ?? '';
+    $phone      = $_POST['phone']       ?? '';
+    $employeeId = $_POST['employee_id'] ?? '';
+    $specialty  = $_POST['specialty']   ?? 'General';
+    $ward       = $_POST['ward']        ?? '';
     try {
-        $stmt = $pdo->prepare("INSERT INTO users (full_name, employee_id, ward_locality, phone, role) VALUES (?, ?, ?, ?, 'engineer')");
-        $stmt->execute([$name, $empId, $ward, $phone]);
-        
-        echo json_encode(['success' => true, 'message' => 'Engineer added successfully.']);
+        $pdo->beginTransaction();
+        $s1 = $pdo->prepare("INSERT INTO users (full_name, phone, role, ward_locality) VALUES (?, ?, 'engineer', ?)");
+        $s1->execute([$fullName, $phone, $ward]);
+        $userId = $pdo->lastInsertId();
+        $s2 = $pdo->prepare("INSERT INTO engineers (user_id, employee_id, specialty, assigned_ward) VALUES (?, ?, ?, ?)");
+        $s2->execute([$userId, $employeeId, $specialty, $ward]);
+        $pdo->commit();
+        echo json_encode(['success' => true, 'message' => 'Engineer added successfully']);
     } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        $pdo->rollBack();
+        echo json_encode(['success' => false, 'message' => 'Failed: ' . $e->getMessage()]);
     }
 }
-elseif ($action === 'updateIssueStatus') {
-    $issueId = $_POST['issue_id'] ?? 0;
-    // Remove the '#' if present, e.g., '#CT001' or '1'
-    $issueId = ltrim($issueId, '#CT');
-    $issueId = (int)$issueId;
-    
-    $status = $_POST['status'] ?? ''; // pending, progress, resolved, rejected
-    $engineer = $_POST['engineer'] ?? null;
-    $note = $_POST['note'] ?? '';
 
-    // Map UI statuses to DB ENUM ('Open', 'In Progress', 'Resolved')
-    $dbStatus = 'Open';
-    if ($status === 'progress') $dbStatus = 'In Progress';
-    if ($status === 'resolved') $dbStatus = 'Resolved';
-    if ($status === 'rejected') $dbStatus = 'Open'; // Or create a 'Rejected' status in DB
+elseif ($action === 'updateIssue') {
+    $issueId    = intval($_POST['issue_id']    ?? 0);
+    $status     = $_POST['status']             ?? '';
+    $engineerId = !empty($_POST['engineer_id']) ? intval($_POST['engineer_id']) : null;
+    $note       = trim($_POST['note']          ?? '');
+
+    $statusMap = [
+        'pending'    => 'Open',
+        'open'       => 'Open',
+        'progress'   => 'In Progress',
+        'in progress'=> 'In Progress',
+        'resolved'   => 'Resolved',
+        'rejected'   => 'Open',
+    ];
+    $dbStatus   = $statusMap[strtolower($status)] ?? 'Open';
+    $resolvedAt = ($dbStatus === 'Resolved') ? date('Y-m-d H:i:s') : null;
 
     try {
-        if ($dbStatus === 'Resolved') {
-            $stmt = $pdo->prepare("UPDATE issues SET status = ?, resolved_at = NOW() WHERE id = ?");
-            $stmt->execute([$dbStatus, $issueId]);
+        if ($engineerId) {
+            $pdo->prepare("UPDATE issues SET status=?, assigned_engineer_id=?, resolved_at=? WHERE id=?")
+                ->execute([$dbStatus, $engineerId, $resolvedAt, $issueId]);
         } else {
-            $stmt = $pdo->prepare("UPDATE issues SET status = ?, resolved_at = NULL WHERE id = ?");
-            $stmt->execute([$dbStatus, $issueId]);
+            $pdo->prepare("UPDATE issues SET status=?, resolved_at=? WHERE id=?")
+                ->execute([$dbStatus, $resolvedAt, $issueId]);
         }
-        
-        // Log action
-        $logDesc = "Issue marked as " . $dbStatus;
-        if ($engineer) {
-            $logDesc .= " and assigned to " . $engineer;
-        }
-        if ($note) {
-            $logDesc .= " Note: " . $note;
-        }
-        
-        $logStmt = $pdo->prepare("INSERT INTO activity_logs (issue_id, action_description) VALUES (?, ?)");
-        $logStmt->execute([$issueId, $logDesc]);
+
+        $desc = "Status updated to {$dbStatus}" . ($note ? ". Note: {$note}" : "");
+        $pdo->prepare("INSERT INTO activity_logs (issue_id, action_description) VALUES (?, ?)")
+            ->execute([$issueId, $desc]);
+
+        $pdo->prepare("
+            INSERT INTO notifications (user_id, issue_id, title, message)
+            SELECT user_id, id, 'Issue Update', ? FROM issues WHERE id = ?
+        ")->execute(["Your issue status has been updated to: {$dbStatus}", $issueId]);
 
         echo json_encode(['success' => true]);
     } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
 }
+
+elseif ($action === 'fetchActivityLog') {
+    try {
+        $stmt = $pdo->query("
+            SELECT al.id, al.action_description, al.created_at,
+                   i.issue_type, i.id as issue_id
+            FROM activity_logs al
+            JOIN issues i ON al.issue_id = i.id
+            ORDER BY al.created_at DESC
+            LIMIT 20
+        ");
+        echo json_encode(['success' => true, 'logs' => $stmt->fetchAll()]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+}
+
 else {
     echo json_encode(['success' => false, 'message' => 'Invalid action']);
 }

@@ -372,6 +372,7 @@ a { text-decoration: none; color: inherit; }
 .dot-green  { background: var(--success); }
 .dot-orange { background: var(--accent); }
 .dot-blue   { background: #1a73e8; }
+.dot-red    { background: #C0392B; }
 .activity-text { font-size: 12px; color: var(--text-main); line-height: 1.5; }
 .activity-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 

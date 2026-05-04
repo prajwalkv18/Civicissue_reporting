@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+(function(){
+    var role = sessionStorage.getItem('ct_role');
+    var id   = sessionStorage.getItem('ct_user_id');
+    if (role !== 'admin' || !id) {
+        window.location.replace('civictrack_login.php?msg=admin_only');
+    }
+})();
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CivicTrack – Admin Panel</title>
@@ -739,47 +748,6 @@
             <div class="modal-actions">
                 <button class="btn-full btn-cancel" onclick="closeEngModal()">Cancel</button>
                 <button class="btn-full btn-confirm" onclick="addEngineer()">Add Engineer</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="engDetailsModal">
-    <div class="modal">
-        <div class="modal-head">
-            <h3>Engineer Details</h3>
-            <button class="modal-close" onclick="closeEngDetailsModal()">✕</button>
-        </div>
-        <div class="modal-content">
-            <div style="display:flex;align-items:center;gap:15px;margin-bottom:20px;">
-                <div class="user-ball ub-blue" style="width:50px;height:50px;font-size:20px;" id="det-initials"></div>
-                <div>
-                    <h2 style="margin:0;font-size:18px;color:#1a1a1a;" id="det-name"></h2>
-                    <div style="color:#666;font-size:13px;margin-top:2px;" id="det-id"></div>
-                </div>
-            </div>
-            
-            <div class="stats-row" style="margin-bottom:20px;">
-                <div class="stat-card" style="padding:15px;min-width:auto;">
-                    <div class="s-num" id="det-active" style="font-size:20px;color:#1a73e8;"></div>
-                    <div class="s-label">Active Jobs</div>
-                </div>
-                <div class="stat-card" style="padding:15px;min-width:auto;">
-                    <div class="s-num" id="det-resolved" style="font-size:20px;color:#2D6A4F;"></div>
-                    <div class="s-label">Resolved</div>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Phone Number</label>
-                <div style="font-weight:500;background:#f8f9fb;padding:10px 12px;border-radius:6px;border:1px solid #e5e7eb;" id="det-phone"></div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Assigned Ward</label>
-                <div style="font-weight:500;background:#f8f9fb;padding:10px 12px;border-radius:6px;border:1px solid #e5e7eb;" id="det-ward"></div>
-            </div>
-            <div class="modal-actions" style="margin-top:10px;">
-                <button class="btn-full btn-cancel" onclick="closeEngDetailsModal()">Close</button>
             </div>
         </div>
     </div>

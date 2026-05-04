@@ -108,7 +108,7 @@ elseif ($action === 'reopenIssue') {
     $issueId = $_POST['issue_id'] ?? 0;
     
     try {
-        $stmt = $pdo->prepare("UPDATE issues SET status = 'In Progress', resolved_at = NULL WHERE id = ? AND user_id = ? AND TIMESTAMPDIFF(HOUR, resolved_at, NOW()) <= 24");
+        $stmt = $pdo->prepare("UPDATE issues SET status = 'In Progress', resolved_at = NULL, priority = 'Urgent' WHERE id = ? AND user_id = ? AND TIMESTAMPDIFF(HOUR, resolved_at, NOW()) <= 24");
         $stmt->execute([$issueId, $_SESSION['user_id']]);
         
         if ($stmt->rowCount() > 0) {
@@ -125,6 +125,78 @@ elseif ($action === 'reopenIssue') {
         }
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Database error']);
+    }
+}
+elseif ($action === 'fetchNotifications') {
+    if (!isset($_SESSION['user_id'])) {
+        echo json_encode(['success' => false, 'message' => 'Not authenticated']);
+        exit;
+    }
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50");
+        $stmt->execute([$_SESSION['user_id']]);
+        $notifs = $stmt->fetchAll();
+        $unread = array_filter($notifs, fn($n) => !$n['is_read']);
+        echo json_encode(['success' => true, 'notifications' => $notifs, 'unread_count' => count($unread)]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+}
+elseif ($action === 'markNotificationRead') {
+    if (!isset($_SESSION['user_id'])) {
+        echo json_encode(['success' => false, 'message' => 'Not authenticated']);
+        exit;
+    }
+    $notifId = intval($_POST['notif_id'] ?? 0);
+    try {
+        if ($notifId === 0) {
+            $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ?")
+                ->execute([$_SESSION['user_id']]);
+        } else {
+            $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?")
+                ->execute([$notifId, $_SESSION['user_id']]);
+        }
+        echo json_encode(['success' => true]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+}
+elseif ($action === 'fetchLeaderboard') {
+    try {
+        $stmt = $pdo->query("
+            SELECT u.id, u.full_name, u.ward_locality,
+                   COUNT(i.id) as report_count,
+                   SUM(CASE WHEN i.status='Resolved' THEN 50 ELSE 10 END) as points
+            FROM users u
+            LEFT JOIN issues i ON u.id = i.user_id
+            WHERE u.role = 'resident'
+            GROUP BY u.id
+            HAVING report_count > 0
+            ORDER BY points DESC
+            LIMIT 20
+        ");
+        echo json_encode(['success' => true, 'leaders' => $stmt->fetchAll()]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+}
+elseif ($action === 'fetchWardStats') {
+    try {
+        $stmt = $pdo->query("
+            SELECT ward,
+                   COUNT(*) as total,
+                   SUM(status='Open') as open_count,
+                   SUM(status='In Progress') as progress_count,
+                   SUM(status='Resolved') as resolved_count,
+                   ROUND(SUM(status='Resolved') / COUNT(*) * 100) as resolution_rate
+            FROM issues
+            WHERE ward IS NOT NULL AND ward != ''
+            GROUP BY ward
+            ORDER BY total DESC
+        ");
+        echo json_encode(['success' => true, 'wards' => $stmt->fetchAll()]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
 }
 else {

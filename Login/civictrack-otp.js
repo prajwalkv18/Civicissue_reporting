@@ -1,7 +1,7 @@
 let currentScreen = 1;
-let isNewUser     = true;
-let currentLang   = 'en';
-let simulatedOtp  = '';
+let isNewUser = true;
+let currentLang = 'en';
+let simulatedOtp = '';
 let resendInterval = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -59,47 +59,50 @@ function sendOtp() {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            isNewUser = data.isNewUser;
-            sessionStorage.setItem('ct_phone', '+91' + phone);
-            if (!isNewUser && data.user) {
-                sessionStorage.setItem('ct_name', data.user.full_name);
-                sessionStorage.setItem('ct_role', data.user.role);
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                isNewUser = data.isNewUser;
+                sessionStorage.setItem('ct_phone', '+91' + phone);
+                if (!isNewUser && data.user) {
+                    sessionStorage.setItem('ct_name', data.user.full_name);
+                    sessionStorage.setItem('ct_ward', data.user.ward_locality || '');
+                    sessionStorage.setItem('ct_city', data.user.city || '');
+                    sessionStorage.setItem('ct_role', data.user.role);
+                    sessionStorage.setItem('ct_user_id', data.user_id);
+                }
+
+                simulatedOtp = String(Math.floor(100000 + Math.random() * 900000));
+
+                const subtitle = document.getElementById('otpSubtitle');
+                const maskedPhone = phone.slice(0, 2) + 'XXXXXX' + phone.slice(-2);
+                const enText = `Enter the 6-digit code sent to +91 ${maskedPhone}`;
+                const hiText = `+91 ${maskedPhone} पर भेजा गया 6-अंकीय कोड दर्ज करें`;
+                subtitle.setAttribute('data-en', enText);
+                subtitle.setAttribute('data-hi', hiText);
+                subtitle.innerText = currentLang === 'en' ? enText : hiText;
+
+                btn.innerHTML = `<span data-en="Send OTP" data-hi="OTP भेजें">${currentLang === 'en' ? 'Send OTP' : 'OTP भेजें'}</span>`;
+                btn.disabled = false;
+
+                alert(`[Demo] Your OTP is: ${simulatedOtp}`);
+                goToScreen(2);
+                startResendTimer();
+                setTimeout(() => {
+                    const firstOtpBox = document.getElementById('o1');
+                    if (firstOtpBox) firstOtpBox.focus();
+                }, 100);
+            } else {
+                alert(data.message || "An error occurred");
+                btn.innerHTML = `<span data-en="Send OTP" data-hi="OTP भेजें">${currentLang === 'en' ? 'Send OTP' : 'OTP भेजें'}</span>`;
+                btn.disabled = false;
             }
-
-            simulatedOtp = String(Math.floor(100000 + Math.random() * 900000));
-            
-            const subtitle = document.getElementById('otpSubtitle');
-            const maskedPhone = phone.slice(0, 2) + 'XXXXXX' + phone.slice(-2);
-            const enText = `Enter the 6-digit code sent to +91 ${maskedPhone}`;
-            const hiText = `+91 ${maskedPhone} पर भेजा गया 6-अंकीय कोड दर्ज करें`;
-            subtitle.setAttribute('data-en', enText);
-            subtitle.setAttribute('data-hi', hiText);
-            subtitle.innerText = currentLang === 'en' ? enText : hiText;
-
+        })
+        .catch(error => {
+            console.error('Error:', error);
             btn.innerHTML = `<span data-en="Send OTP" data-hi="OTP भेजें">${currentLang === 'en' ? 'Send OTP' : 'OTP भेजें'}</span>`;
             btn.disabled = false;
-            
-            alert(`[Demo] Your OTP is: ${simulatedOtp}`);
-            goToScreen(2);
-            startResendTimer();
-            setTimeout(() => {
-                const firstOtpBox = document.getElementById('o1');
-                if(firstOtpBox) firstOtpBox.focus();
-            }, 100);
-        } else {
-            alert(data.message || "An error occurred");
-            btn.innerHTML = `<span data-en="Send OTP" data-hi="OTP भेजें">${currentLang === 'en' ? 'Send OTP' : 'OTP भेजें'}</span>`;
-            btn.disabled = false;
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        btn.innerHTML = `<span data-en="Send OTP" data-hi="OTP भेजें">${currentLang === 'en' ? 'Send OTP' : 'OTP भेजें'}</span>`;
-        btn.disabled = false;
-    });
+        });
 }
 
 function verifyOtp() {
@@ -194,9 +197,9 @@ function goToScreen(num) {
     for (let i = 1; i <= 4; i++) {
         const d = document.getElementById(`dot-${i}`);
         if (d) {
-            if (i < num)        d.className = 'dot completed';
+            if (i < num) d.className = 'dot completed';
             else if (i === num) d.className = 'dot active';
-            else                d.className = 'dot';
+            else d.className = 'dot';
         }
     }
 
@@ -212,12 +215,12 @@ function submitRegistration() {
     }
     const name = nameEl.value.trim();
     const ward = document.getElementById('locality').value.trim() || 'Ward 42';
-    const city = document.getElementById('city').value.trim()     || 'Mumbai';
+    const city = document.getElementById('city').value.trim() || 'Mumbai';
     const optIn = document.getElementById('whatsappOptIn') ? document.getElementById('whatsappOptIn').checked : false;
-    
+
     // Get phone without +91 for DB
     let phone = sessionStorage.getItem('ct_phone') || '';
-    if(phone.startsWith('+91')) phone = phone.substring(3);
+    if (phone.startsWith('+91')) phone = phone.substring(3);
 
     const formData = new FormData();
     formData.append('action', 'registerUser');
@@ -231,31 +234,32 @@ function submitRegistration() {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            sessionStorage.setItem('ct_name', name);
-            sessionStorage.setItem('ct_ward', ward);
-            sessionStorage.setItem('ct_city', city);
-            sessionStorage.setItem('ct_role', 'resident');
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                sessionStorage.setItem('ct_name', name);
+                sessionStorage.setItem('ct_ward', ward);
+                sessionStorage.setItem('ct_city', city);
+                sessionStorage.setItem('ct_role', 'resident');
+                sessionStorage.setItem('ct_user_id', data.user_id);
 
-            const title = document.getElementById('successTitle');
-            if (title) {
-                title.innerText = currentLang === 'en' ? `Welcome, ${name}!` : `स्वागत है, ${name}!`;
-                title.setAttribute('data-en', `Welcome, ${name}!`);
-                title.setAttribute('data-hi', `स्वागत है, ${name}!`);
+                const title = document.getElementById('successTitle');
+                if (title) {
+                    title.innerText = currentLang === 'en' ? `Welcome, ${name}!` : `स्वागत है, ${name}!`;
+                    title.setAttribute('data-en', `Welcome, ${name}!`);
+                    title.setAttribute('data-hi', `स्वागत है, ${name}!`);
+                }
+
+                goToScreen(4);
+                finish(name);
+            } else {
+                alert(data.message || "Registration failed");
             }
-
-            goToScreen(4);
-            finish(name);
-        } else {
-            alert(data.message || "Registration failed");
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert("An error occurred during registration");
-    });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("An error occurred during registration");
+        });
 }
 
 function finish(name) {
@@ -265,7 +269,10 @@ function finish(name) {
     if (controls) controls.style.display = 'none';
 
     setTimeout(() => {
-        window.location.href = 'civictrack-dashboard.php';
+        const role = sessionStorage.getItem('ct_role');
+        window.location.href = (role === 'admin')
+            ? 'civictrack-admin.php'
+            : 'civictrack-dashboard.php';
     }, 2000);
 }
 

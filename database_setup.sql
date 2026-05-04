@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS users (
     city VARCHAR(100),
     whatsapp_opt_in TINYINT(1) DEFAULT 0,
     role ENUM('resident', 'admin', 'engineer') DEFAULT 'resident',
-    employee_id VARCHAR(50) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -29,6 +28,7 @@ CREATE TABLE IF NOT EXISTS issues (
     photo_path VARCHAR(255),
     resolved_at TIMESTAMP NULL,
     is_citizen_approved TINYINT(1) DEFAULT 0,
+    assigned_engineer_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -59,3 +59,18 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE SET NULL
 );
+
+-- 5. Engineers Table
+CREATE TABLE IF NOT EXISTS engineers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNIQUE NOT NULL,
+    employee_id VARCHAR(20) UNIQUE NOT NULL,
+    specialty VARCHAR(100),
+    assigned_ward VARCHAR(100),
+    status ENUM('active', 'on leave', 'inactive') DEFAULT 'active',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Link issues to engineers
+ALTER TABLE issues ADD CONSTRAINT fk_engineer FOREIGN KEY (assigned_engineer_id) REFERENCES engineers(id) ON DELETE SET NULL;
+
