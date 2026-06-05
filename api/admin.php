@@ -31,16 +31,18 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 if ($action === 'fetchStats') {
     try {
-        $totalUsers    = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'resident'")->fetchColumn();
-        $totalEngineers= $pdo->query("SELECT COUNT(*) FROM engineers")->fetchColumn();
-        $totalIssues   = $pdo->query("SELECT COUNT(*) FROM issues")->fetchColumn();
-        $pendingIssues = $pdo->query("SELECT COUNT(*) FROM issues WHERE status = 'Open'")->fetchColumn();
-        $resolvedIssues= $pdo->query("SELECT COUNT(*) FROM issues WHERE status = 'Resolved'")->fetchColumn();
+        $totalUsers      = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'resident'")->fetchColumn();
+        $totalEngineers  = $pdo->query("SELECT COUNT(*) FROM engineers")->fetchColumn();
+        $totalIssues     = $pdo->query("SELECT COUNT(*) FROM issues")->fetchColumn();
+        $pendingIssues   = $pdo->query("SELECT COUNT(*) FROM issues WHERE status = 'Open'")->fetchColumn();
+        $inProgressIssues= $pdo->query("SELECT COUNT(*) FROM issues WHERE status = 'In Progress'")->fetchColumn();
+        $resolvedIssues  = $pdo->query("SELECT COUNT(*) FROM issues WHERE status = 'Resolved'")->fetchColumn();
         echo json_encode(['success' => true, 'stats' => [
             'total_users'     => $totalUsers,
             'total_engineers' => $totalEngineers,
             'total_issues'    => $totalIssues,
             'pending'         => $pendingIssues,
+            'in_progress'     => $inProgressIssues,
             'resolved'        => $resolvedIssues
         ]]);
     } catch (PDOException $e) {
@@ -114,6 +116,11 @@ elseif ($action === 'updateIssue') {
         'resolved'   => 'Resolved',
         'rejected'   => 'Open',
     ];
+    $isRejected = (strtolower($status) === 'rejected');
+    if ($isRejected && $note === '') {
+        echo json_encode(['success' => false, 'message' => 'Rejection remark is required.']);
+        exit;
+    }
     $dbStatus   = $statusMap[strtolower($status)] ?? 'Open';
     $resolvedAt = ($dbStatus === 'Resolved') ? date('Y-m-d H:i:s') : null;
 
@@ -126,14 +133,22 @@ elseif ($action === 'updateIssue') {
                 ->execute([$dbStatus, $resolvedAt, $issueId]);
         }
 
-        $desc = "Status updated to {$dbStatus}" . ($note ? ". Note: {$note}" : "");
+        if ($isRejected) {
+            $desc = "Issue rejected. Remark: {$note}";
+        } else {
+            $desc = "Status updated to {$dbStatus}" . ($note ? ". Note: {$note}" : "");
+        }
         $pdo->prepare("INSERT INTO activity_logs (issue_id, action_description) VALUES (?, ?)")
             ->execute([$issueId, $desc]);
 
+        $notificationTitle = $isRejected ? 'Issue Rejected' : 'Issue Update';
+        $notificationMessage = $isRejected
+            ? "Your issue was rejected. Remark: {$note}"
+            : "Your issue status has been updated to: {$dbStatus}";
         $pdo->prepare("
             INSERT INTO notifications (user_id, issue_id, title, message)
-            SELECT user_id, id, 'Issue Update', ? FROM issues WHERE id = ?
-        ")->execute(["Your issue status has been updated to: {$dbStatus}", $issueId]);
+            SELECT user_id, id, ?, ? FROM issues WHERE id = ?
+        ")->execute([$notificationTitle, $notificationMessage, $issueId]);
 
         echo json_encode(['success' => true]);
     } catch (PDOException $e) {

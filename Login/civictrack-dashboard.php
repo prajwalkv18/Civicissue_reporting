@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="civictrack-dashboard.css">
+    <!-- exifr: lightweight EXIF reader to extract GPS embedded in photos -->
+    <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/lite.umd.js"></script>
 </head>
 <body>
 
@@ -281,12 +283,12 @@
 
         let reportCount = 0;
 
-        // Fetch issues and notifications on load + auto-refresh every 30s
+        // Fetch issues and notifications on load + auto-refresh every 20s
         document.addEventListener('DOMContentLoaded', () => {
             fetchIssues();
             fetchActivityFeed();
-            // Auto-refresh every 30 seconds so admin changes appear without reloading
-            setInterval(() => { fetchIssues(); fetchActivityFeed(); }, 30000);
+            // Auto-refresh every 20 seconds so engineer/admin changes appear without reloading
+            setInterval(() => { fetchIssues(); fetchActivityFeed(); }, 20000);
         });
 
         function setActive(el) {
@@ -301,19 +303,37 @@
             document.getElementById('reportModal').classList.remove('open');
         }
 
-        function handlePhotoSelect(input, previewId, locationInputId) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById(previewId);
-                    preview.style.display = 'block';
-                    preview.querySelector('img').src = e.target.result;
+        async function handlePhotoSelect(input, previewId, locationInputId) {
+            if (!input.files || !input.files[0]) return;
 
-                    if(confirm("Would you like to automatically attach your current GPS location to this report?")) {
-                        detectLocation(locationInputId);
+            // Show preview immediately
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById(previewId);
+                preview.style.display = 'block';
+                preview.querySelector('img').src = e.target.result;
+            };
+            reader.readAsDataURL(input.files[0]);
+
+            // Step 1: Try to extract GPS from the photo's EXIF data
+            // This is the CORRECT location — where the photo was taken (the issue site)
+            try {
+                if (typeof exifr !== 'undefined') {
+                    const gps = await exifr.gps(input.files[0]);
+                    if (gps && gps.latitude != null && gps.longitude != null) {
+                        const locationInput = document.getElementById(locationInputId);
+                        locationInput.value = `Geo: ${gps.latitude.toFixed(6)}, ${gps.longitude.toFixed(6)}`;
+                        showToast('📍 Location read from photo GPS data!');
+                        return; // ✅ Done — use the photo's embedded GPS
                     }
                 }
-                reader.readAsDataURL(input.files[0]);
+            } catch (exifErr) {
+                console.warn('EXIF GPS read failed:', exifErr);
+            }
+
+            // Step 2: Photo has no GPS tag — ask the user if they want device GPS
+            if (confirm('No GPS data found in this photo.\nWould you like to attach your current device location instead?')) {
+                detectLocation(locationInputId);
             }
         }
 
@@ -342,15 +362,12 @@
             if (e.target === this) closeModal();
         });
 
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.textContent = msg;
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 3000);
-        }
+        // showToast defined below (supports colour parameter)
 
         function fetchIssues() {
-            fetch('../api/issues.php?action=fetchIssues')
+            // Only fetch THIS user's own reports so stat cards are accurate
+            const uid = currentUserId > 0 ? `&user_id=${currentUserId}` : '';
+            fetch(`../api/issues.php?action=fetchIssues&filter=mine${uid}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -363,7 +380,7 @@
                         let openCount = 0;
 
                         if (reportCount === 0) {
-                            list.innerHTML = '<div class="issue-item" style="justify-content:center; color:#aaa; font-size:13px; padding:24px;">No reports yet. Use "Report Issue" to get started!</div>';
+                            list.innerHTML = '<div class="issue-item" style="justify-content:center; color:#aaa; font-size:13px; padding:24px;">No reports yet. Use &ldquo;Report Issue&rdquo; to get started!</div>';
                         } else {
                             data.issues.forEach(issue => {
                                 if (issue.status === 'Resolved') resolvedCount++;
@@ -391,7 +408,11 @@
             const icon  = icons[typeKey]  || '📌';
             const color = iconColors[typeKey] || '#f0f0f0';
 
-            const statusClass = issue.status === 'Resolved' ? 'status-resolved' : (issue.status === 'In Progress' ? 'status-progress' : 'status-open');
+            const statusClass = issue.status === 'Resolved'
+                ? 'status-resolved'
+                : (issue.status === 'In Progress'
+                    ? 'status-progress'
+                    : (issue.status === 'Rejected' ? 'status-rejected' : 'status-open'));
             let statusLabel = issue.status;
 
             // Approval action bar — only for this user's own resolved issues
@@ -410,6 +431,10 @@
                 statusLabel = 'Approved & Closed';
             }
 
+            const rejectionNoteHtml = issue.status === 'Rejected' && issue.rejection_remark
+                ? `<div style="margin-top:10px;padding:10px 12px;border:1px solid #f5c2c7;background:#fff5f5;border-radius:8px;font-size:13px;color:#842029;"><strong>Rejection remark:</strong> ${issue.rejection_remark}</div>`
+                : '';
+
             const item = document.createElement('div');
             item.className = 'issue-item';
             item.style.flexDirection = 'column';
@@ -423,12 +448,13 @@
                     </div>
                     <span class="issue-status ${statusClass}">${statusLabel}</span>
                 </div>
+                ${rejectionNoteHtml}
                 ${actionsHtml}`;
 
             container.appendChild(item);
         }
 
-        function submitIssueToDb(type, location, desc, ward, priority) {
+        function submitIssueToDb(type, location, desc, ward, priority, photoInputId) {
             const formData = new FormData();
             formData.append('action', 'submitIssue');
             formData.append('type', type);
@@ -436,6 +462,13 @@
             formData.append('description', desc);
             formData.append('ward', ward);
             formData.append('priority', priority);
+            // Send user_id as a fallback in case the PHP session cookie expired
+            const uid = sessionStorage.getItem('ct_user_id');
+            if (uid) formData.append('user_id', uid);
+            const photoInput = photoInputId ? document.getElementById(photoInputId) : null;
+            if (photoInput && photoInput.files && photoInput.files[0]) {
+                formData.append('photo', photoInput.files[0]);
+            }
 
             fetch('../api/issues.php', {
                 method: 'POST',
@@ -444,13 +477,20 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showToast('✅ Report submitted successfully!');
+                    if (data.photo_warning) {
+                        showToast('✅ Report saved! ⚠️ ' + data.photo_warning, '#e67e22');
+                    } else {
+                        showToast('✅ Report submitted successfully!');
+                    }
                     fetchIssues(); // Refresh list
                 } else {
-                    alert(data.message || 'Error submitting report');
+                    showToast('❌ ' + (data.message || 'Error submitting report'), '#C0392B');
                 }
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('❌ Network error. Please try again.', '#C0392B');
+            });
         }
 
         function submitQuickReport() {
@@ -461,11 +501,13 @@
             if (!type) { showToast('⚠️ Please select an issue type'); return; }
             if (!loc)  { showToast('⚠️ Please enter a location'); return; }
 
-            submitIssueToDb(type, loc, desc, userWard, 'Normal');
+            submitIssueToDb(type, loc, desc, userWard, 'Normal', 'quickPhoto');
             
             document.getElementById('quickIssueType').value = '';
             document.getElementById('quickLocation').value  = '';
             document.getElementById('quickDesc').value      = '';
+            document.getElementById('quickPhoto').value     = '';
+            document.getElementById('quickPhotoPreview').style.display = 'none';
         }
 
         function submitModalReport() {
@@ -478,13 +520,15 @@
             if (!type) { showToast('⚠️ Please select an issue type'); return; }
             if (!loc)  { showToast('⚠️ Please enter a location'); return; }
 
-            submitIssueToDb(type, loc, desc, ward, priority);
+            submitIssueToDb(type, loc, desc, ward, priority, 'modalPhoto');
             closeModal();
             
             document.getElementById('modalIssueType').value  = '';
             document.getElementById('modalLocation').value   = '';
             document.getElementById('modalWard').value       = '';
             document.getElementById('modalDesc').value       = '';
+            document.getElementById('modalPhoto').value      = '';
+            document.getElementById('modalPhotoPreview').style.display = 'none';
         }
 
         function showToast(msg, color) {

@@ -87,6 +87,7 @@
         const userName = sessionStorage.getItem('ct_name')  || 'Resident';
         const userWard = sessionStorage.getItem('ct_ward')  || 'Ward 42, Mumbai';
         const userCity = sessionStorage.getItem('ct_city')  || 'Mumbai';
+        const currentUserId = parseInt(sessionStorage.getItem('ct_user_id') || '0');
         document.getElementById('sidebarName').textContent = userName;
         document.getElementById('sidebarWard').textContent = `${userWard}, ${userCity}`;
         document.getElementById('sidebarAvatar').textContent = userName.charAt(0).toUpperCase();
@@ -94,10 +95,15 @@
         function openModal() { document.getElementById('reportModal').classList.add('open'); }
         function closeModal() { document.getElementById('reportModal').classList.remove('open'); }
 
-        document.addEventListener('DOMContentLoaded', fetchMyReports);
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchMyReports();
+            // Auto-refresh every 20 s so engineer/admin updates appear in real time
+            setInterval(fetchMyReports, 20000);
+        });
 
         function fetchMyReports() {
-            fetch('../api/issues.php?action=fetchIssues&filter=mine')
+            const uid = currentUserId > 0 ? `&user_id=${currentUserId}` : '';
+            fetch(`../api/issues.php?action=fetchIssues&filter=mine${uid}`)
             .then(res => res.json())
             .then(data => {
                 const container = document.querySelector('.page-content');
@@ -116,6 +122,7 @@
                         let statusClass = 'status-open';
                         if (issue.status === 'In Progress') statusClass = 'status-progress';
                         if (issue.status === 'Resolved') statusClass = 'status-resolved';
+                        if (issue.status === 'Rejected') statusClass = 'status-rejected';
                         
                         let statusText = issue.status;
                         
@@ -139,12 +146,17 @@
                             statusText = 'Approved & Closed';
                         }
                         
+                        const rejectionRemarkHtml = issue.status === 'Rejected' && issue.rejection_remark
+                            ? `<p style="margin-top: 10px; padding: 10px 12px; background: #fff5f5; border: 1px solid #f5c2c7; border-radius: 8px; color: #842029;"><strong>Rejection remark:</strong> ${issue.rejection_remark}</p>`
+                            : '';
+
                         html += `
                         <div class="report-card">
                             <h3>${issue.issue_type}</h3>
                             <p><strong>Location:</strong> ${issue.location_text}</p>
                             <p>Status: <span class="issue-status ${statusClass}">${statusText}</span></p>
                             ${issue.description ? `<p style="color: #666; margin-top: 8px; font-size: 14px;">"${issue.description}"</p>` : ''}
+                            ${rejectionRemarkHtml}
                             <p class="issue-meta" style="margin-top: 10px;">Reported on ${new Date(issue.created_at).toLocaleDateString()}</p>
                             ${actionsHtml}
                         </div>`;

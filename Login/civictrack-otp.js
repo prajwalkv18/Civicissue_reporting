@@ -72,26 +72,52 @@ function sendOtp() {
                     sessionStorage.setItem('ct_user_id', data.user_id);
                 }
 
-                simulatedOtp = String(Math.floor(100000 + Math.random() * 900000));
+                // Call backend to send actual Twilio OTP
+                const otpFormData = new FormData();
+                otpFormData.append('action', 'sendOtp');
+                otpFormData.append('phone', phone);
+                
+                fetch('../api/auth.php', {
+                    method: 'POST',
+                    body: otpFormData
+                })
+                .then(res => res.json())
+                .then(otpData => {
+                    btn.innerHTML = `<span data-en="Send OTP" data-hi="OTP भेजें">${currentLang === 'en' ? 'Send OTP' : 'OTP भेजें'}</span>`;
+                    btn.disabled = false;
 
-                const subtitle = document.getElementById('otpSubtitle');
-                const maskedPhone = phone.slice(0, 2) + 'XXXXXX' + phone.slice(-2);
-                const enText = `Enter the 6-digit code sent to +91 ${maskedPhone}`;
-                const hiText = `+91 ${maskedPhone} पर भेजा गया 6-अंकीय कोड दर्ज करें`;
-                subtitle.setAttribute('data-en', enText);
-                subtitle.setAttribute('data-hi', hiText);
-                subtitle.innerText = currentLang === 'en' ? enText : hiText;
+                    if (otpData.success) {
+                        const subtitle = document.getElementById('otpSubtitle');
+                        const maskedPhone = phone.slice(0, 2) + 'XXXXXX' + phone.slice(-2);
+                        const enText = `Enter the 6-digit code sent to +91 ${maskedPhone}`;
+                        const hiText = `+91 ${maskedPhone} पर भेजा गया 6-अंकीय कोड दर्ज करें`;
+                        subtitle.setAttribute('data-en', enText);
+                        subtitle.setAttribute('data-hi', hiText);
+                        subtitle.innerText = currentLang === 'en' ? enText : hiText;
 
-                btn.innerHTML = `<span data-en="Send OTP" data-hi="OTP भेजें">${currentLang === 'en' ? 'Send OTP' : 'OTP भेजें'}</span>`;
-                btn.disabled = false;
-
-                alert(`[Demo] Your OTP is: ${simulatedOtp}`);
-                goToScreen(2);
-                startResendTimer();
-                setTimeout(() => {
-                    const firstOtpBox = document.getElementById('o1');
-                    if (firstOtpBox) firstOtpBox.focus();
-                }, 100);
+                        goToScreen(2);
+                        startResendTimer();
+                        // Local mode support: show OTP from API response for localhost testing.
+                        if (otpData.otp) {
+                            alert(`Your OTP is: ${otpData.otp}`);
+                            const boxes = document.querySelectorAll('.otp-box');
+                            otpData.otp.split('').forEach((d, i) => {
+                                if (boxes[i]) boxes[i].value = d;
+                            });
+                        }
+                        setTimeout(() => {
+                            const firstOtpBox = document.getElementById('o1');
+                            if (firstOtpBox) firstOtpBox.focus();
+                        }, 100);
+                    } else {
+                        alert(otpData.message || "Failed to send OTP. Make sure you added your Twilio credentials in api/auth.php");
+                    }
+                })
+                .catch(err => {
+                    btn.innerHTML = `<span data-en="Send OTP" data-hi="OTP भेजें">${currentLang === 'en' ? 'Send OTP' : 'OTP भेजें'}</span>`;
+                    btn.disabled = false;
+                    alert("Error communicating with OTP service.");
+                });
             } else {
                 alert(data.message || "An error occurred");
                 btn.innerHTML = `<span data-en="Send OTP" data-hi="OTP भेजें">${currentLang === 'en' ? 'Send OTP' : 'OTP भेजें'}</span>`;
@@ -116,37 +142,81 @@ function verifyOtp() {
         return;
     }
 
-    if (entered !== simulatedOtp) {
-        boxes.forEach(b => { b.classList.add('invalid'); b.value = ''; });
-        error.style.display = 'block';
-        boxes[0].focus();
-        return;
-    }
-
-    boxes.forEach(b => b.classList.remove('invalid'));
-    error.style.display = 'none';
-    clearInterval(resendInterval);
-
     const btn = document.getElementById('verifyOtpBtn');
-    btn.innerHTML = `<span>${currentLang === 'en' ? 'Verified ✓' : 'सत्यापित ✓'}</span>`;
+    btn.innerHTML = `<span>${currentLang === 'en' ? 'Verifying…' : 'सत्यापित कर रहे हैं…'}</span>`;
     btn.disabled = true;
 
-    setTimeout(() => {
-        if (isNewUser) {
-            goToScreen(3);
+    const phone = document.getElementById('phoneInput').value.trim();
+    const formData = new FormData();
+    formData.append('action', 'verifyOtp');
+    formData.append('phone', phone);
+    formData.append('otp', entered);
+
+    fetch('../api/auth.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            boxes.forEach(b => b.classList.remove('invalid'));
+            error.style.display = 'none';
+            clearInterval(resendInterval);
+
+            btn.innerHTML = `<span>${currentLang === 'en' ? 'Verified ✓' : 'सत्यापित ✓'}</span>`;
+            
+            setTimeout(() => {
+                if (isNewUser) {
+                    goToScreen(3);
+                } else {
+                    finish('User');
+                }
+            }, 600);
         } else {
-            finish('User');
+            boxes.forEach(b => { b.classList.add('invalid'); b.value = ''; });
+            error.style.display = 'block';
+            boxes[0].focus();
+            
+            btn.innerHTML = `<span data-en="Verify & Continue" data-hi="सत्यापित करें और जारी रखें">${currentLang === 'en' ? 'Verify & Continue' : 'सत्यापित करें और जारी रखें'}</span>`;
+            btn.disabled = false;
         }
-    }, 600);
+    })
+    .catch(err => {
+        btn.innerHTML = `<span data-en="Verify & Continue" data-hi="सत्यापित करें और जारी रखें">${currentLang === 'en' ? 'Verify & Continue' : 'सत्यापित करें और जारी रखें'}</span>`;
+        btn.disabled = false;
+        alert("Error communicating with OTP verification service.");
+    });
 }
 
 function resendOtp() {
-    simulatedOtp = String(Math.floor(100000 + Math.random() * 900000));
-    alert(`[Demo] Your new OTP is: ${simulatedOtp}`);
-    document.querySelectorAll('.otp-box').forEach(b => { b.value = ''; b.classList.remove('invalid'); });
-    document.getElementById('otpError').style.display = 'none';
-    document.getElementById('o1').focus();
-    startResendTimer();
+    const phone = document.getElementById('phoneInput').value.trim();
+    const resendBtn = document.getElementById('resendBtn');
+    resendBtn.disabled = true;
+
+    const otpFormData = new FormData();
+    otpFormData.append('action', 'sendOtp');
+    otpFormData.append('phone', phone);
+    
+    fetch('../api/auth.php', { method: 'POST', body: otpFormData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.querySelectorAll('.otp-box').forEach(b => { b.value = ''; b.classList.remove('invalid'); });
+                document.getElementById('otpError').style.display = 'none';
+                if (data.otp) {
+                    alert(`Your new OTP is: ${data.otp}`);
+                    const boxes = document.querySelectorAll('.otp-box');
+                    data.otp.split('').forEach((d, i) => {
+                        if (boxes[i]) boxes[i].value = d;
+                    });
+                }
+                document.getElementById('o1').focus();
+                startResendTimer();
+            } else {
+                alert("Failed to resend OTP.");
+                resendBtn.disabled = false;
+            }
+        });
 }
 
 function startResendTimer() {
@@ -268,12 +338,32 @@ function finish(name) {
     if (progress) progress.style.display = 'none';
     if (controls) controls.style.display = 'none';
 
-    setTimeout(() => {
-        const role = sessionStorage.getItem('ct_role');
-        window.location.href = (role === 'admin')
-            ? 'civictrack-admin.php'
-            : 'civictrack-dashboard.php';
-    }, 2000);
+    // Sync JS sessionStorage → PHP $_SESSION before navigating
+    // so that api/issues.php can find $_SESSION['user_id']
+    const userId = sessionStorage.getItem('ct_user_id');
+    const role   = sessionStorage.getItem('ct_role') || 'resident';
+
+    const syncAndRedirect = () => {
+        let dest = 'civictrack-dashboard.php';
+        if (role === 'admin') {
+            dest = 'civictrack-admin.php';
+        } else if (role === 'engineer') {
+            dest = 'civictrack-engineer.php';
+        }
+        window.location.href = dest;
+    };
+
+    if (userId) {
+        const fd = new FormData();
+        fd.append('action', 'setSession');
+        fd.append('user_id', userId);
+        fd.append('role', role);
+        fetch('../api/auth.php', { method: 'POST', body: fd })
+            .then(() => setTimeout(syncAndRedirect, 800))
+            .catch(() => setTimeout(syncAndRedirect, 800));
+    } else {
+        setTimeout(syncAndRedirect, 2000);
+    }
 }
 
 function toggleLanguage() {

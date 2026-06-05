@@ -70,11 +70,19 @@ async function fetchAdminData() {
                 location: i.location_text,
                 ward: i.ward || '—',
                 priority: i.priority,
-                status: i.status === 'Open' ? 'pending' : i.status === 'In Progress' ? 'progress' : 'resolved',
+                status: i.status === 'Open'
+                    ? 'pending'
+                    : i.status === 'In Progress'
+                        ? 'progress'
+                        : i.status === 'Rejected'
+                            ? 'rejected'
+                            : 'resolved',
                 date: new Date(i.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }),
                 icon_bg: '#fef3e2',
                 lat: parseFloat(i.latitude),
-                lng: parseFloat(i.longitude)
+                lng: parseFloat(i.longitude),
+                photoPath: i.photo_path || '',
+                rejectionRemark: i.rejection_remark || ''
             }));
             renderIssueTable();
             renderActivityFeed();
@@ -130,8 +138,87 @@ async function fetchAdminData() {
         }
 
         buildCharts();
+
+        // Start 30-second auto-refresh so engineer updates appear without manual reload
+        if (!fetchAdminData._refreshStarted) {
+            fetchAdminData._refreshStarted = true;
+            setInterval(refreshAdminStats, 30000);
+        }
     } catch (error) {
         console.error('Error fetching admin data:', error);
+    }
+}
+
+/**
+ * Lightweight auto-refresh: re-fetches stats, issues list, and activity log
+ * without reloading users/engineers or duplicating activity entries.
+ * Called every 30 s so engineer status changes appear in real time.
+ */
+async function refreshAdminStats() {
+    try {
+        // Refresh stats counters
+        const statsData = await (await fetch(adminApi('fetchStats'))).json();
+        if (statsData.success) updateDashboardCounters(statsData.stats);
+
+        // Refresh issue list (picks up engineer status changes)
+        const issuesData = await (await fetch('../api/issues.php?action=fetchIssues')).json();
+        if (issuesData.success) {
+            issueList = issuesData.issues.map(i => ({
+                id: '#' + i.id.toString().padStart(3, '0'),
+                realId: i.id,
+                type: i.issue_type,
+                emoji: getEmoji(i.issue_type),
+                reporter: i.reported_by || 'Unknown',
+                location: i.location_text,
+                ward: i.ward || '—',
+                priority: i.priority,
+                status: i.status === 'Open' ? 'pending'
+                    : i.status === 'In Progress' ? 'progress'
+                    : i.status === 'Rejected'    ? 'rejected'
+                    : 'resolved',
+                date: new Date(i.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }),
+                icon_bg: '#fef3e2',
+                lat: parseFloat(i.latitude),
+                lng: parseFloat(i.longitude),
+                photoPath: i.photo_path || '',
+                rejectionRemark: i.rejection_remark || ''
+            }));
+            renderIssueTable();
+        }
+
+        // Refresh engineers table (updates active/resolved counts per engineer)
+        const engData = await (await fetch(adminApi('fetchEngineers'))).json();
+        if (engData.success) {
+            engineerList = engData.engineers.map(e => ({
+                name: e.full_name,
+                id: e.employee_id,
+                dbId: e.id,
+                ward: e.assigned_ward,
+                active: parseInt(e.active_issues) || 0,
+                resolved: parseInt(e.resolved_issues) || 0,
+                status: e.status.charAt(0).toUpperCase() + e.status.slice(1)
+            }));
+            renderEngineers();
+        }
+
+        // Refresh activity log — clear first to avoid duplicate entries
+        const actData = await (await fetch(adminApi('fetchActivityLog'))).json();
+        if (actData.success) {
+            ACTIVITY.length = 0; // clear without breaking array reference
+            actData.logs.forEach(log => {
+                ACTIVITY.push({
+                    color: log.action_description.includes('Resolved') ? 'td-green' :
+                           log.action_description.includes('Urgent')  ? 'td-red'   : 'td-blue',
+                    text: `<strong>#${log.issue_id}</strong> ${log.issue_type} — ${log.action_description}`,
+                    time: new Date(log.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+                });
+            });
+            renderActivityFeed();
+        }
+
+        setTimestamp();
+    } catch (e) {
+        console.warn('Auto-refresh error:', e);
     }
 }
 
@@ -143,6 +230,7 @@ function getEmoji(type) {
 function updateDashboardCounters(stats) {
     document.getElementById('s-total').textContent = stats.total_issues;
     document.getElementById('s-pending').textContent = stats.pending;
+    if (document.getElementById('s-progress')) document.getElementById('s-progress').textContent = stats.in_progress || 0;
     document.getElementById('s-resolved').textContent = stats.resolved;
     document.getElementById('s-users').textContent = stats.total_users;
     document.getElementById('pendingBadge').textContent = stats.pending;
@@ -238,7 +326,7 @@ function renderIssueTable() {
                     <div class="issue-emoji" style="background:${i.icon_bg};">${i.emoji}</div>
                     <div>
                         <div style="font-weight:600;font-size:13px;">${i.type}</div>
-                        <div style="font-size:11px;color:var(--text-muted);">${i.reporter}</div>
+                        <div style="font-size:11px;color:var(--text-muted);">${i.reporter}${i.photoPath ? ` · <a href="../${i.photoPath}" target="_blank" rel="noopener" style="color:#1a73e8;text-decoration:none;font-weight:600;">📷 Photo ↗</a>` : ''}</div>
                     </div>
                 </div>
             </td>
@@ -266,9 +354,11 @@ function renderIssueTable() {
 }
 
 function statusBadge(s) {
-    const map = { pending:'b-pending Pending', progress:'b-progress In Progress', resolved:'b-resolved Resolved', rejected:'b-rejected Rejected' };
-    const [cls, label] = (map[s] || 'b-pending Pending').split(' ');
-    return `<span class="badge ${cls}">${label.replace('b-','')}</span>`;
+    const cls   = { pending:'b-pending', progress:'b-progress', resolved:'b-resolved', rejected:'b-rejected' };
+    const label = { pending:'Pending',   progress:'In Progress', resolved:'Resolved',  rejected:'Rejected'   };
+    const c = cls[s]   || 'b-pending';
+    const l = label[s] || 'Pending';
+    return `<span class="badge ${c}">${l}</span>`;
 }
 
 function priorityBadge(p) {
@@ -280,10 +370,19 @@ function priorityBadge(p) {
 function quickStatus(id, newStatus) {
     const issue = issueList.find(i => i.id === id);
     if (!issue) return;
+    let note = '';
+    if (newStatus === 'rejected') {
+        note = (prompt('Enter rejection remark (required):') || '').trim();
+        if (!note) {
+            toast('⚠️ Rejection remark is required');
+            return;
+        }
+    }
     const fd = new FormData();
     fd.append('action', 'updateIssue');
     fd.append('issue_id', issue.realId);
     fd.append('status', newStatus);
+    if (note) fd.append('note', note);
     fetch('../api/admin.php?uid=' + adminUid(), { method: 'POST', body: fd })
         .then(r => r.json())
         .then(data => {
@@ -431,12 +530,28 @@ function openAssignModal(id) {
             document.getElementById('m-title').value  = `${issue.emoji} ${issue.type} at ${issue.location}`;
             document.getElementById('m-status').value = issue.status;
             document.getElementById('modalTitle').textContent = 'Assign / Update Issue';
+            const wrap = document.getElementById('m-photo-wrap');
+            const img = document.getElementById('m-photo-img');
+            const link = document.getElementById('m-photo-link');
+            if (issue.photoPath) {
+                const normalizedPath = issue.photoPath.startsWith('/') ? issue.photoPath : `../${issue.photoPath}`;
+                img.src = normalizedPath;
+                link.href = normalizedPath;
+                wrap.style.display = 'block';
+            } else {
+                img.src = '';
+                link.href = '#';
+                wrap.style.display = 'none';
+            }
         }
     } else {
         document.getElementById('m-id').value    = 'New Issue';
         document.getElementById('m-title').value = '';
         document.getElementById('m-status').value = 'pending';
         document.getElementById('modalTitle').textContent = 'Add Issue Manually';
+        document.getElementById('m-photo-wrap').style.display = 'none';
+        document.getElementById('m-photo-img').src = '';
+        document.getElementById('m-photo-link').href = '#';
     }
     document.getElementById('m-note').value = '';
 
@@ -457,6 +572,10 @@ function saveAssignment() {
     const engVal = document.getElementById('m-engineer').value;
     const status = document.getElementById('m-status').value;
     const note   = document.getElementById('m-note').value.trim();
+    if (status === 'rejected' && !note) {
+        toast('⚠️ Rejection remark is required');
+        return;
+    }
 
     if (activeIssueId) {
         const issue = issueList.find(i => i.id === activeIssueId);
@@ -519,7 +638,7 @@ async function addEngineer() {
         document.getElementById('eng-id').value   = '';
         document.getElementById('eng-phone').value = '';
     } else {
-        toast('❌ ' + data.message);
+        toast(`❌ Failed: ${data.message || 'Unknown error'}`);
     }
 }
 

@@ -687,6 +687,11 @@
                 <label class="form-label">Issue Title</label>
                 <input class="form-input" id="m-title" readonly style="background:#f0f2f5;">
             </div>
+            <div class="form-group" id="m-photo-wrap" style="display:none;">
+                <label class="form-label">Uploaded Photo</label>
+                <a id="m-photo-link" href="#" target="_blank" rel="noopener" style="display:inline-block;font-size:12px;margin-bottom:8px;">Open full photo ↗</a>
+                <img id="m-photo-img" src="" alt="Issue photo" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;">
+            </div>
             <div class="form-group">
                 <label class="form-label">Assign to Engineer</label>
                 <select class="form-select" id="m-engineer">
@@ -708,8 +713,8 @@
                 </select>
             </div>
             <div class="form-group">
-                <label class="form-label">Admin Note</label>
-                <textarea class="form-textarea" id="m-note" placeholder="Optional note to engineer…"></textarea>
+                <label class="form-label">Admin Note / Rejection Remark</label>
+                <textarea class="form-textarea" id="m-note" placeholder="Required when status is Rejected"></textarea>
             </div>
             <div class="modal-actions">
                 <button class="btn-full btn-cancel" onclick="closeModal()">Cancel</button>

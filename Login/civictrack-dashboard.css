@@ -319,6 +319,7 @@ a { text-decoration: none; color: inherit; }
 .status-open     { background: #fef3e2; color: var(--warning); }
 .status-progress { background: #e8f0fe; color: #1a73e8; }
 .status-resolved { background: #e6f4ea; color: var(--success); }
+.status-rejected { background: #fce8e6; color: #c0392b; }
 
 .quick-report { padding: 16px 20px; }
 .form-group { margin-bottom: 14px; }
